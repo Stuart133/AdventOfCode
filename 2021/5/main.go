@@ -19,39 +19,54 @@ type line struct {
 }
 
 func (l line) getPoints() []point {
+	var pointsFunc func(int, []point)
 	points := make([]point, 0)
-	dist := (l.one.x - l.two.x) + (l.one.y - l.two.y)
-	if dist < 0 {
-		dist = (-dist)
+	dist := abs(l.one.x - l.two.x)
+	if dist == 0 {
+		dist = abs(l.one.y - l.two.y)
 	}
 	dist++
 
 	if l.one.x == l.two.x {
-		startY := 0
-		if l.one.y > l.two.y {
-			startY = l.two.y
-		} else {
-			startY = l.one.y
-		}
-		for i := 0; i < dist; i++ {
+		startY := min(l.one.y, l.two.y)
+		pointsFunc = func(i int, p []point) {
 			points = append(points, point{
 				x: l.one.x,
 				y: startY + i,
 			})
 		}
 	} else if l.one.y == l.two.y {
-		startX := 0
-		if l.one.x > l.two.x {
-			startX = l.two.x
-		} else {
-			startX = l.one.x
-		}
-		for i := 0; i < dist; i++ {
+		startX := min(l.one.x, l.two.x)
+		pointsFunc = func(i int, p []point) {
 			points = append(points, point{
 				x: startX + i,
 				y: l.one.y,
 			})
 		}
+	} else {
+		if (l.one.x < l.two.x && l.one.y < l.two.y) || (l.one.x > l.two.x && l.one.y > l.two.y) {
+			startX := min(l.one.x, l.two.x)
+			startY := min(l.one.y, l.two.y)
+			pointsFunc = func(i int, p []point) {
+				points = append(points, point{
+					x: startX + i,
+					y: startY + i,
+				})
+			}
+		} else {
+			startX := min(l.one.x, l.two.x)
+			startY := max(l.one.y, l.two.y)
+			pointsFunc = func(i int, p []point) {
+				points = append(points, point{
+					x: startX + i,
+					y: startY - i,
+				})
+			}
+		}
+	}
+
+	for i := 0; i < dist; i++ {
+		pointsFunc(i, points)
 	}
 
 	return points
@@ -69,6 +84,8 @@ func main() {
 	for i := range data {
 		lines[i] = parseLine(data[i])
 	}
+
+	lines[0].getPoints()
 
 	hot := make(map[point](int))
 	total := 0
@@ -111,4 +128,28 @@ func getInt(s string) int {
 	i, _ := strconv.Atoi(s)
 
 	return i
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+
+	return x
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+
+	return y
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+
+	return y
 }
