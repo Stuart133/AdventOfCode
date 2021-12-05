@@ -27,36 +27,30 @@ func (l line) getPoints() []point {
 	dist++
 
 	if l.one.x == l.two.x {
+		startY := 0
 		if l.one.y > l.two.y {
-			for i := 0; i < dist; i++ {
-				points = append(points, point{
-					x: l.one.x,
-					y: l.two.y + i,
-				})
-			}
+			startY = l.two.y
 		} else {
-			for i := 0; i < dist; i++ {
-				points = append(points, point{
-					x: l.one.x,
-					y: l.one.y + i,
-				})
-			}
+			startY = l.one.y
 		}
-	} else {
+		for i := 0; i < dist; i++ {
+			points = append(points, point{
+				x: l.one.x,
+				y: startY + i,
+			})
+		}
+	} else if l.one.y == l.two.y {
+		startX := 0
 		if l.one.x > l.two.x {
-			for i := 0; i < dist; i++ {
-				points = append(points, point{
-					x: l.two.x + i,
-					y: l.one.y,
-				})
-			}
+			startX = l.two.x
 		} else {
-			for i := 0; i < dist; i++ {
-				points = append(points, point{
-					x: l.one.x + i,
-					y: l.one.y,
-				})
-			}
+			startX = l.one.x
+		}
+		for i := 0; i < dist; i++ {
+			points = append(points, point{
+				x: startX + i,
+				y: l.one.y,
+			})
 		}
 	}
 
@@ -71,12 +65,9 @@ func main() {
 	}
 
 	data := strings.Split(string(c), "\n")
-	lines := make([]line, 0)
+	lines := make([]line, len(data))
 	for i := range data {
-		line := parseLine(data[i])
-		if line.one.x == line.two.x || line.one.y == line.two.y {
-			lines = append(lines, parseLine(data[i]))
-		}
+		lines[i] = parseLine(data[i])
 	}
 
 	hot := make(map[point](int))
