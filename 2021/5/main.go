@@ -19,54 +19,27 @@ type line struct {
 }
 
 func (l line) getPoints() []point {
-	var pointsFunc func(int, []point)
-	points := make([]point, 0)
-	dist := abs(l.one.x - l.two.x)
-	if dist == 0 {
-		dist = abs(l.one.y - l.two.y)
+	xDir := 0
+	if l.one.x < l.two.x {
+		xDir = 1
+	} else if l.one.x > l.two.x {
+		xDir = -1
 	}
-	dist++
 
-	if l.one.x == l.two.x {
-		startY := min(l.one.y, l.two.y)
-		pointsFunc = func(i int, p []point) {
-			points = append(points, point{
-				x: l.one.x,
-				y: startY + i,
-			})
-		}
-	} else if l.one.y == l.two.y {
-		startX := min(l.one.x, l.two.x)
-		pointsFunc = func(i int, p []point) {
-			points = append(points, point{
-				x: startX + i,
-				y: l.one.y,
-			})
-		}
-	} else {
-		if (l.one.x < l.two.x && l.one.y < l.two.y) || (l.one.x > l.two.x && l.one.y > l.two.y) {
-			startX := min(l.one.x, l.two.x)
-			startY := min(l.one.y, l.two.y)
-			pointsFunc = func(i int, p []point) {
-				points = append(points, point{
-					x: startX + i,
-					y: startY + i,
-				})
-			}
-		} else {
-			startX := min(l.one.x, l.two.x)
-			startY := max(l.one.y, l.two.y)
-			pointsFunc = func(i int, p []point) {
-				points = append(points, point{
-					x: startX + i,
-					y: startY - i,
-				})
-			}
-		}
+	yDir := 0
+	if l.one.y < l.two.y {
+		yDir = 1
+	} else if l.one.y > l.two.y {
+		yDir = -1
 	}
+	dist := max(abs(l.one.x-l.two.x), abs(l.one.y-l.two.y)) + 1
+	points := make([]point, dist)
 
 	for i := 0; i < dist; i++ {
-		pointsFunc(i, points)
+		points[i] = point{
+			x: l.one.x + (i * xDir),
+			y: l.one.y + (i * yDir),
+		}
 	}
 
 	return points
@@ -79,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	data := strings.Split(string(c), "\n")
+	data := strings.Split(string(c), "\r\n")
 	lines := make([]line, len(data))
 	for i := range data {
 		lines[i] = parseLine(data[i])
@@ -136,14 +109,6 @@ func abs(x int) int {
 	}
 
 	return x
-}
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-
-	return y
 }
 
 func max(x, y int) int {
