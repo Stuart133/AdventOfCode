@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	c, err := ioutil.ReadFile("./data.txt")
+	c, err := ioutil.ReadFile("./data-smol.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v", err)
 		os.Exit(1)
@@ -18,19 +18,26 @@ func main() {
 
 	rawData := strings.Split(string(c), ",")
 	data := make([]int, len(rawData))
+	total := 0
 	for i := range rawData {
 		data[i], _ = strconv.Atoi(rawData[i])
-	}
-	sort.Ints(data)
-
-	if (len(data)/2)%2 != 0 {
-		fmt.Printf("Median: %d\n", data[len(data)/2])
-	} else {
-		fmt.Printf("Medians: %d, %d\n", data[len(data)/2], data[len(data)/2+1])
+		total += data[i]
 	}
 
-	cost := fuelCost(data, data[len(data)/2+1])
-	fmt.Println(cost)
+	fmt.Println(total / len(data))
+	avg := int(math.Round(float64(total) / float64(len(data))))
+	fmt.Println(avg)
+	fmt.Println(newFuelCost(data, total/len(data)))
+}
+
+func newFuelCost(c []int, p int) int {
+	total := 0
+	for i := range c {
+		dist := abs(c[i] - p)
+		total += (dist * (dist + 1)) / 2
+	}
+
+	return total
 }
 
 func fuelCost(c []int, p int) int {
