@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"strings"
 )
@@ -28,6 +29,105 @@ func main() {
 	}
 
 	fmt.Println(countUnique(lines))
+	total := 0
+	for _, l := range lines {
+		seg := mapSegments(l)
+		lineTotal := 0
+		for i, o := range l.output {
+			lineTotal += powInt(10, len(l.output)-i-1) * getNumber(seg, o)
+		}
+
+		total += lineTotal
+	}
+
+	fmt.Println(total)
+}
+
+func getNumber(segmentMap map[byte]byte, seg segment) int {
+	_, v := seg[segmentMap['g']]
+	if v {
+		_, v = seg[segmentMap['e']]
+		if v {
+			if len(seg) == 7 {
+				return 8
+			} else if len(seg) == 5 {
+				return 2
+			} else {
+				_, v = seg[segmentMap['d']]
+				if v {
+					return 6
+				} else {
+					return 0
+				}
+			}
+		} else {
+			if len(seg) == 6 {
+				return 9
+			} else {
+				_, v = seg[segmentMap['b']]
+				if v {
+					return 5
+				} else {
+					return 3
+				}
+			}
+		}
+	} else {
+		if len(seg) == 2 {
+			return 1
+		} else if len(seg) == 4 {
+			return 4
+		} else {
+			return 7
+		}
+	}
+}
+
+func mapSegments(l line) map[byte]byte {
+	four := segment{}
+	two := segment{}
+	freq := make(map[byte]int)
+	for _, s := range l.segments {
+		for k := range s {
+			freq[k]++
+		}
+
+		if len(s) == 4 {
+			four = s
+		}
+
+		if len(s) == 2 {
+			two = s
+		}
+	}
+
+	segmentMap := make(map[byte]byte)
+	for k, v := range freq {
+		switch v {
+		case 4:
+			segmentMap['e'] = k
+		case 6:
+			segmentMap['b'] = k
+		case 7:
+			_, v := four[k]
+			if v {
+				segmentMap['d'] = k
+			} else {
+				segmentMap['g'] = k
+			}
+		case 8:
+			_, v := two[k]
+			if v {
+				segmentMap['c'] = k
+			} else {
+				segmentMap['a'] = k
+			}
+		case 9:
+			segmentMap['f'] = k
+		}
+	}
+
+	return segmentMap
 }
 
 func countUnique(lines []line) int {
@@ -62,4 +162,8 @@ func processLine(l string) line {
 	}
 
 	return line
+}
+
+func powInt(x, y int) int {
+	return int(math.Pow(float64(x), float64(y)))
 }
