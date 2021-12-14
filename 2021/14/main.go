@@ -7,10 +7,12 @@ import (
 	"strings"
 )
 
+var memo = make(map[int]map[string]map[string]int)
+
 const steps = 40
 
 func main() {
-	c, err := ioutil.ReadFile("./data-smol.txt")
+	c, err := ioutil.ReadFile("./data.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v", err)
 		os.Exit(1)
@@ -36,7 +38,12 @@ func solve(polymer string, pairs map[string]string) map[string]int {
 }
 
 func letterFreq(polymer string, pairs map[string]string, depth int, isLeft bool) map[string]int {
-	letters := make(map[string]int)
+	letters, v := memo[depth][polymer]
+	if v && !isLeft {
+		return letters
+	}
+
+	letters = make(map[string]int)
 	if !isLeft {
 		for i := 0; i < len(polymer)-1; i++ {
 			letters[string(polymer[i])]++
@@ -56,17 +63,30 @@ func letterFreq(polymer string, pairs map[string]string, depth int, isLeft bool)
 	for k, v := range right {
 		letters[k] += v
 	}
+
+	if !isLeft {
+		_, v = memo[depth]
+		if v {
+			memo[depth][polymer] = letters
+		} else {
+			memo[depth] = map[string]map[string]int{
+				polymer: letters,
+			}
+		}
+	}
 	return letters
 }
 
 func getScore(letters map[string]int) int {
 	maxCount := 0
-	minCount := 999999999
+	minCount := 999999999999999999
 	for _, v := range letters {
 		maxCount = max(maxCount, v)
 		minCount = min(minCount, v)
 	}
 
+	fmt.Println(maxCount)
+	fmt.Println(minCount)
 	return maxCount - minCount
 }
 
