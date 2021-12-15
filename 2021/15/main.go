@@ -21,19 +21,19 @@ func newPoint(x, y int) point {
 }
 
 func main() {
-	c, err := ioutil.ReadFile("./data-smol.txt")
+	c, err := ioutil.ReadFile("./data.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v", err)
 		os.Exit(1)
 	}
 
 	rawData := strings.Split(string(c), "\r\n")
-	g, _ := buildGrid(rawData, 5)
+	g, uv := buildGrid(rawData, 5)
+
+	risk := search(g, uv, 0, 0, len(g)-1, len(g[0])-1)
 
 	fmt.Println(g)
-	// risk := search(g, uv, 0, 0, len(g)-1, len(g[0])-1)
-
-	// fmt.Println(risk)
+	fmt.Println(risk)
 }
 
 func search(g [][]int, uv map[point]int, x, y, dx, dy int) int {
@@ -77,7 +77,7 @@ func buildGrid(data []string, f int) ([][]int, map[point]int) {
 			for l := 0; l < f; l++ {
 				for j := range data[i] {
 					rawVal := getInt(string(data[i][j]))
-					grid[i+(len(data)*k)][j+len(data[0])*l] = (rawVal + k + l) % 9
+					grid[i+(len(data)*k)][j+len(data[0])*l] = normalize(rawVal + k + l)
 					unvisited[newPoint(i+(len(data)*k), j+len(data[0])*l)] = 9999999999999
 				}
 			}
@@ -85,6 +85,16 @@ func buildGrid(data []string, f int) ([][]int, map[point]int) {
 	}
 
 	return grid, unvisited
+}
+
+func normalize(i int) int {
+	val := i % 9
+
+	if val == 0 {
+		return 9
+	}
+
+	return val
 }
 
 func min(x, y int) int {
