@@ -23,6 +23,10 @@ func (l literal) getVersionSum() int {
 	return l.version
 }
 
+func (l literal) getValue() int {
+	return l.value
+}
+
 type operator struct {
 	version int
 	typ     int
@@ -38,12 +42,89 @@ func (o operator) getVersionSum() int {
 	return o.version + total
 }
 
+func (o operator) getValue() int {
+	var calFunc func(a, b int) int
+	switch o.typ {
+	case 0:
+		calFunc = sum
+	case 1:
+		calFunc = product
+	case 2:
+		calFunc = min
+	case 3:
+		calFunc = max
+	case 5:
+		calFunc = greater
+	case 6:
+		calFunc = less
+	case 7:
+		calFunc = equal
+	}
+
+	total := o.packets[0].getValue()
+	for i := 1; i < len(o.packets); i++ {
+		// fmt.Printf("%d %d %d\n", o.typ, total, o.packets[i].getValue())
+		total = calFunc(total, o.packets[i].getValue())
+	}
+
+	return total
+}
+
+func sum(a, b int) int {
+	return a + b
+}
+
+func product(a, b int) int {
+	return a * b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
+}
+
+func greater(a, b int) int {
+	if a > b {
+		return 1
+	}
+
+	return 0
+}
+
+func less(a, b int) int {
+	if a < b {
+		return 1
+	}
+
+	return 0
+}
+
+func equal(a, b int) int {
+	if a == b {
+		return 1
+	}
+
+	return 0
+}
+
 type packet interface {
 	getVersionSum() int
+	getValue() int
 }
 
 func main() {
-	c, err := ioutil.ReadFile("./data-smol.txt")
+	c, err := ioutil.ReadFile("./data.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		os.Exit(1)
@@ -57,6 +138,8 @@ func main() {
 	}
 
 	packets := p.parse()
+	fmt.Println(len(packets))
+	fmt.Println(packets[0].getValue())
 	fmt.Println(packets[0].getVersionSum())
 }
 
@@ -89,17 +172,17 @@ func (p *parser) parseLiteral(version int) (literal, int) {
 
 	bits := 6
 
+	digits := make([]int, 0)
 	for i := 0; true; i++ {
 		isLastDigit := false
 		if p.advance() == '0' {
 			isLastDigit = true
 		}
-		for i := 0; i < 4; i++ {
-			p.advance()
-		}
+		digits = append(digits, p.consumeValue(4))
 		bits += 5
 
 		if isLastDigit {
+			l.value = getValue(digits)
 			break
 		}
 	}
@@ -162,6 +245,15 @@ func (p *parser) isAtEnd() bool {
 	return p.current >= len(p.source)-10
 }
 
+func getValue(digits []int) int {
+	val := 0
+	for i := range digits {
+		val += digits[i] * pow(10, len(digits)-i-1)
+	}
+
+	return val
+}
+
 func bitString(s string) string {
 	bits := ""
 	for i := range s {
@@ -179,8 +271,8 @@ func convertChar(c byte) string {
 	return fmt.Sprintf("%04b", c-55)
 }
 
-func pow(a, b int) int64 {
-	return int64(math.Pow(float64(a), float64(b)))
+func pow(a, b int) int {
+	return int(math.Pow(float64(a), float64(b)))
 }
 
 func getInt(s string) int {
