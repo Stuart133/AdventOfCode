@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
 	"strconv"
 )
@@ -16,14 +15,14 @@ type parser struct {
 type literal struct {
 	version int
 	typ     int
-	value   int
+	value   int64
 }
 
 func (l literal) getVersionSum() int {
 	return l.version
 }
 
-func (l literal) getValue() int {
+func (l literal) getValue() int64 {
 	return l.value
 }
 
@@ -42,8 +41,9 @@ func (o operator) getVersionSum() int {
 	return o.version + total
 }
 
-func (o operator) getValue() int {
-	var calFunc func(a, b int) int
+func (o operator) getValue() int64 {
+	fmt.Printf("%d - %v %d\n", o.typ, o.packets, len(o.packets))
+	var calFunc func(a, b int64) int64
 	switch o.typ {
 	case 0:
 		calFunc = sum
@@ -55,10 +55,23 @@ func (o operator) getValue() int {
 		calFunc = max
 	case 5:
 		calFunc = greater
+		if len(o.packets) != 2 {
+			panic("OH NO")
+		}
+
 	case 6:
 		calFunc = less
+		if len(o.packets) != 2 {
+			panic("OH NO")
+		}
+
 	case 7:
 		calFunc = equal
+		if len(o.packets) != 2 {
+			panic("OH NO")
+		}
+	default:
+		panic("OH NO")
 	}
 
 	total := o.packets[0].getValue()
@@ -67,18 +80,19 @@ func (o operator) getValue() int {
 		total = calFunc(total, o.packets[i].getValue())
 	}
 
+	fmt.Printf("Total = %d\n", total)
 	return total
 }
 
-func sum(a, b int) int {
+func sum(a, b int64) int64 {
 	return a + b
 }
 
-func product(a, b int) int {
+func product(a, b int64) int64 {
 	return a * b
 }
 
-func min(a, b int) int {
+func min(a, b int64) int64 {
 	if a < b {
 		return a
 	}
@@ -86,7 +100,7 @@ func min(a, b int) int {
 	return b
 }
 
-func max(a, b int) int {
+func max(a, b int64) int64 {
 	if a > b {
 		return a
 	}
@@ -94,7 +108,7 @@ func max(a, b int) int {
 	return b
 }
 
-func greater(a, b int) int {
+func greater(a, b int64) int64 {
 	if a > b {
 		return 1
 	}
@@ -102,7 +116,7 @@ func greater(a, b int) int {
 	return 0
 }
 
-func less(a, b int) int {
+func less(a, b int64) int64 {
 	if a < b {
 		return 1
 	}
@@ -110,7 +124,7 @@ func less(a, b int) int {
 	return 0
 }
 
-func equal(a, b int) int {
+func equal(a, b int64) int64 {
 	if a == b {
 		return 1
 	}
@@ -120,7 +134,7 @@ func equal(a, b int) int {
 
 type packet interface {
 	getVersionSum() int
-	getValue() int
+	getValue() int64
 }
 
 func main() {
@@ -130,6 +144,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Println(getInt("10010011110011011011010011011010"))
+
 	message := string(c)
 	bits := bitString(message)
 	p := parser{
@@ -138,9 +154,7 @@ func main() {
 	}
 
 	packets := p.parse()
-	fmt.Println(len(packets))
 	fmt.Println(packets[0].getValue())
-	fmt.Println(packets[0].getVersionSum())
 }
 
 func (p *parser) parse() []packet {
@@ -155,8 +169,8 @@ func (p *parser) parse() []packet {
 }
 
 func (p *parser) parsePacket() (packet, int) {
-	version := p.consumeValue(3)
-	typ := p.consumeValue(3)
+	version := int(p.consumeValue(3))
+	typ := int(p.consumeValue(3))
 
 	if typ == 4 {
 		return p.parseLiteral(version)
@@ -172,17 +186,25 @@ func (p *parser) parseLiteral(version int) (literal, int) {
 
 	bits := 6
 
-	digits := make([]int, 0)
+	digits := make([]int64, 0)
+	valueString := ""
 	for i := 0; true; i++ {
 		isLastDigit := false
 		if p.advance() == '0' {
 			isLastDigit = true
 		}
-		digits = append(digits, p.consumeValue(4))
+		digString := ""
+		for i := 0; i < 4; i++ {
+			bit := string(p.advance())
+			digString += bit
+			valueString += bit
+		}
+		digits = append(digits, getInt(digString))
 		bits += 5
 
 		if isLastDigit {
-			l.value = getValue(digits)
+			fmt.Printf("%v %s %d\n", digits, valueString, getInt(valueString))
+			l.value = getInt(valueString)
 			break
 		}
 	}
@@ -208,14 +230,14 @@ func (p *parser) parseOperator(version int, typ int) (operator, int) {
 			subBits += len
 			bits += len
 
-			if subBits == length {
+			if subBits == int(length) {
 				break
 			}
 		}
 	} else {
 		count := p.consumeValue(11)
 		bits += 11
-		for i := 0; i < count; i++ {
+		for i := 0; i < int(count); i++ {
 			pack, len := p.parsePacket()
 			bits += len
 			o.packets = append(o.packets, pack)
@@ -225,7 +247,7 @@ func (p *parser) parseOperator(version int, typ int) (operator, int) {
 	return o, bits
 }
 
-func (p *parser) consumeValue(length int) int {
+func (p *parser) consumeValue(length int) int64 {
 	valString := ""
 	for i := 0; i < length; i++ {
 		valString += string(p.advance())
@@ -242,16 +264,7 @@ func (p *parser) advance() byte {
 }
 
 func (p *parser) isAtEnd() bool {
-	return p.current >= len(p.source)-10
-}
-
-func getValue(digits []int) int {
-	val := 0
-	for i := range digits {
-		val += digits[i] * pow(10, len(digits)-i-1)
-	}
-
-	return val
+	return p.current >= len(p.source)-1
 }
 
 func bitString(s string) string {
@@ -271,12 +284,8 @@ func convertChar(c byte) string {
 	return fmt.Sprintf("%04b", c-55)
 }
 
-func pow(a, b int) int {
-	return int(math.Pow(float64(a), float64(b)))
-}
+func getInt(s string) int64 {
+	i, _ := strconv.ParseInt(s, 2, 64)
 
-func getInt(s string) int {
-	i, _ := strconv.ParseInt(s, 2, 32)
-
-	return int(i)
+	return i
 }
