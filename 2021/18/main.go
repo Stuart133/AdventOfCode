@@ -25,21 +25,100 @@ func main() {
 	rawData := strings.Split(string(c), "\n\r")
 	for i := range rawData {
 		tree := parse(rawData[i])
-		inOrder(&tree)
+		inOrderExplode(&tree, 0)
+		inOrderPrint(&tree)
 	}
-
 }
 
-func inOrder(t *node) {
+func inOrderPrint(t *node) {
 	if t == nil {
 		return
 	}
 
-	inOrder(t.left)
+	inOrderPrint(t.left)
 	if t.value != 0 {
 		fmt.Println(t.value)
 	}
-	inOrder(t.right)
+	inOrderPrint(t.right)
+}
+
+func inOrderExplode(t *node, d int) {
+	if t == nil {
+		return
+	}
+
+	if d >= 4 && t.value == 0 && t.left.value != 0 {
+		left := prev(t.left)
+		if left != nil {
+			left.value += t.left.value
+		}
+		right := next(t.right)
+		if right != nil {
+			right.value += t.right.value
+		}
+
+		t.left = nil
+		t.right = nil
+	}
+
+	inOrderExplode(t.left, d+1)
+	inOrderExplode(t.right, d+1)
+}
+
+func next(t *node) *node {
+	if t.right != nil {
+		return treeMinimum(t.right)
+	}
+
+	cur := t.parent
+	for cur != nil && t == cur.right {
+		t = cur
+		cur = cur.parent
+	}
+
+	if cur == nil {
+		return nil
+	} else {
+		return treeMaximum(cur.right)
+	}
+}
+
+func prev(t *node) *node {
+	if t.left != nil {
+		return treeMaximum(t.left)
+	}
+
+	cur := t.parent
+	for cur != nil && t == cur.left {
+		t = cur
+		cur = cur.parent
+	}
+
+	if cur == nil {
+		return nil
+	} else {
+		return treeMaximum(cur.left)
+	}
+}
+
+func treeMinimum(t *node) *node {
+	if t.left != nil {
+		return treeMinimum(t.left)
+	} else if t.right != nil {
+		return treeMinimum(t.right)
+	}
+
+	return t
+}
+
+func treeMaximum(t *node) *node {
+	if t.right != nil {
+		return treeMaximum(t.right)
+	} else if t.left != nil {
+		return treeMaximum(t.left)
+	}
+
+	return t
 }
 
 func parse(s string) node {
