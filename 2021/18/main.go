@@ -16,26 +16,21 @@ type node struct {
 }
 
 func main() {
-	c, err := ioutil.ReadFile("./data-smol.txt")
+	c, err := ioutil.ReadFile("./data.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		os.Exit(1)
 	}
 
 	rawData := strings.Split(string(c), "\n")
-	numbers := make([]*node, len(rawData))
-	for i := range rawData {
-		numbers[i] = parse(rawData[i])
-	}
-
 	maxMag := 0
-	for i := range numbers {
-		for j := range numbers {
+	for i := 0; i < len(rawData); i++ {
+		for j := 0; j < len(rawData); j++ {
 			if i == j {
 				continue
 			}
 
-			add := addTrees(numbers[i], numbers[j])
+			add := addTrees(parse(rawData[i]), parse(rawData[j]))
 			reduce(add)
 			mag := magnitude(add)
 			maxMag = max(maxMag, mag)
