@@ -22,12 +22,47 @@ func main() {
 		os.Exit(1)
 	}
 
-	rawData := strings.Split(string(c), "\n\r")
+	rawData := strings.Split(string(c), "\n")
+	var tree *node
 	for i := range rawData {
-		tree := parse(rawData[i])
-		inOrderExplode(&tree, 0)
-		inOrderPrint(&tree)
+		if i == 0 {
+			tree = parse(rawData[i])
+			continue
+		}
+		add := parse(rawData[i])
+		tree = addTrees(tree, add)
+		reduce(tree)
 	}
+
+	inOrderPrint(tree)
+}
+
+func reduce(t *node) {
+	for {
+		ex := inOrderExplode(t, 0)
+		if ex {
+			continue
+		}
+
+		split := inOrderSplit(t)
+		if split {
+			continue
+		}
+
+		break
+	}
+}
+
+func addTrees(a *node, b *node) *node {
+	new := &node{
+		left:  a,
+		right: b,
+	}
+
+	a.parent = new
+	b.parent = new
+
+	return new
 }
 
 func inOrderPrint(t *node) {
@@ -36,18 +71,57 @@ func inOrderPrint(t *node) {
 	}
 
 	inOrderPrint(t.left)
-	if t.value != 0 {
+	if t.left == nil {
 		fmt.Println(t.value)
 	}
 	inOrderPrint(t.right)
 }
 
-func inOrderExplode(t *node, d int) {
+func inOrderSplit(t *node) bool {
 	if t == nil {
-		return
+		return false
 	}
 
-	if d >= 4 && t.value == 0 && t.left.value != 0 {
+	split := false
+	if t.value >= 10 {
+		leftVal := t.value / 2
+		rightVal := 0
+		if t.value%2 == 0 {
+			rightVal = t.value / 2
+		} else {
+			rightVal = (t.value / 2) + 1
+		}
+		split = true
+		t.left = &node{
+			parent: t,
+			value:  leftVal,
+		}
+		t.right = &node{
+			parent: t,
+			value:  rightVal,
+		}
+		t.value = 0
+
+		return split
+	}
+
+	split = inOrderSplit(t.left) || split
+	if split {
+		return split
+	}
+	split = inOrderSplit(t.right) || split
+
+	return split
+}
+
+func inOrderExplode(t *node, d int) bool {
+	if t == nil {
+		return false
+	}
+
+	exploded := false
+	if d >= 4 && t.left != nil && t.left.left == nil {
+		exploded = true
 		left := prev(t.left)
 		if left != nil {
 			left.value += t.left.value
@@ -57,12 +131,20 @@ func inOrderExplode(t *node, d int) {
 			right.value += t.right.value
 		}
 
+		t.value = 0
 		t.left = nil
 		t.right = nil
+
+		return exploded
 	}
 
-	inOrderExplode(t.left, d+1)
-	inOrderExplode(t.right, d+1)
+	exploded = inOrderExplode(t.left, d+1) || exploded
+	if exploded {
+		return exploded
+	}
+	exploded = inOrderExplode(t.right, d+1) || exploded
+
+	return exploded
 }
 
 func next(t *node) *node {
@@ -79,7 +161,7 @@ func next(t *node) *node {
 	if cur == nil {
 		return nil
 	} else {
-		return treeMaximum(cur.right)
+		return treeMinimum(cur.right)
 	}
 }
 
@@ -121,7 +203,7 @@ func treeMaximum(t *node) *node {
 	return t
 }
 
-func parse(s string) node {
+func parse(s string) *node {
 	root := node{}
 	cur := &root
 	for _, c := range s {
@@ -143,7 +225,7 @@ func parse(s string) node {
 		}
 	}
 
-	return root
+	return &root
 }
 
 func getInt(s string) int {
