@@ -23,18 +23,45 @@ func main() {
 	}
 
 	rawData := strings.Split(string(c), "\n")
-	var tree *node
+	numbers := make([]*node, len(rawData))
 	for i := range rawData {
-		if i == 0 {
-			tree = parse(rawData[i])
-			continue
-		}
-		add := parse(rawData[i])
-		tree = addTrees(tree, add)
-		reduce(tree)
+		numbers[i] = parse(rawData[i])
 	}
 
-	inOrderPrint(tree)
+	maxMag := 0
+	for i := range numbers {
+		for j := range numbers {
+			if i == j {
+				continue
+			}
+
+			add := addTrees(numbers[i], numbers[j])
+			reduce(add)
+			mag := magnitude(add)
+			maxMag = max(maxMag, mag)
+		}
+	}
+
+	fmt.Println(maxMag)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
+}
+
+func magnitude(t *node) int {
+	if t.left == nil {
+		return t.value
+	}
+
+	leftVal := magnitude(t.left) * 3
+	rightVal := magnitude(t.right) * 2
+
+	return leftVal + rightVal
 }
 
 func reduce(t *node) {
