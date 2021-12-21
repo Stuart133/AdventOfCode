@@ -13,66 +13,66 @@ type player struct {
 	score    int
 }
 
-func (p *player) turn(d *die) {
-	move := 0
-	for i := 0; i < 3; i++ {
-		move += d.roll()
+type state struct {
+	p1       player
+	p2       player
+	p1Active bool
+}
+
+func (s state) next(roll int) state {
+	if s.p1Active {
+		s.p1.position = mod(s.p1.position+roll, 10)
+		s.p1.score += s.p1.position
+		s.p1Active = false
+	} else {
+		s.p2.position = mod(s.p2.position+roll, 10)
+		s.p2.score += s.p2.position
+		s.p1Active = true
 	}
 
-	p.position = mod(p.position+move, 10)
-	p.score += p.position
+	return s
 }
 
-type die struct {
-	value int
+func turn(s state) (int64, int64) {
+	if s.p1.score >= 21 {
+		return 1, 0
+	} else if s.p2.score >= 21 {
+		return 0, 1
+	}
+
+	ow, tw := int64(0), int64(0)
+	for i := 1; i <= 3; i++ {
+		for j := 1; j <= 3; j++ {
+			for k := 1; k <= 3; k++ {
+				o, t := turn(s.next(i + j + k))
+				ow += o
+				tw += t
+			}
+		}
+	}
+
+	return ow, tw
 }
-
-func (d *die) roll() int {
-	ret := d.value
-	d.value = mod(d.value+1, 100)
-
-	return ret
-}
-
 func main() {
-	c, err := ioutil.ReadFile("./data.txt")
+	c, err := ioutil.ReadFile("./data-smol.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		os.Exit(1)
 	}
 
 	rawData := strings.Split(string(c), "\n")
+
 	p1 := parse(rawData[0])
 	p2 := parse(rawData[1])
-	die := die{
-		value: 1,
+	s := state{
+		p1:       p1,
+		p2:       p2,
+		p1Active: true,
 	}
 
-	rollCount := 0
-	for {
-		if p2.score >= 1000 {
-			break
-		}
-
-		p1.turn(&die)
-		rollCount += 3
-
-		if p1.score >= 1000 {
-			break
-		}
-
-		p2.turn(&die)
-		rollCount += 3
-	}
-
-	losingScore := 0
-	if p1.score >= 1000 {
-		losingScore = p2.score
-	} else {
-		losingScore = p1.score
-	}
-
-	fmt.Println(losingScore * rollCount)
+	ow, tw := turn(s)
+	fmt.Println(ow)
+	fmt.Println(tw)
 }
 
 func parse(s string) player {
