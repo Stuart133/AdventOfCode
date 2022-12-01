@@ -23,7 +23,9 @@ fn day_one() {
         }
     }
 
-    println!("{:?}", calories.iter().max().unwrap());
+    calories.sort_by(|a, b| b.cmp(a));
+
+    println!("{:?}", calories[0] + calories[1] + calories[2]);
 }
 
 fn read_file_to_string(path: &Path) -> String {
