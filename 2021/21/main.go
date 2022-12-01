@@ -19,6 +19,13 @@ type state struct {
 	p1Active bool
 }
 
+type wins struct {
+	p1 int
+	p2 int
+}
+
+var cache map[state]wins = make(map[state]wins)
+
 func (s state) next(roll int) state {
 	if s.p1Active {
 		s.p1.position = mod(s.p1.position+roll, 10)
@@ -33,28 +40,33 @@ func (s state) next(roll int) state {
 	return s
 }
 
-func turn(s state) (int64, int64) {
-	if s.p1.score >= 21 {
-		return 1, 0
-	} else if s.p2.score >= 21 {
-		return 0, 1
+func turn(s state) wins {
+	w, v := cache[s]
+	if v {
+		return w
 	}
 
-	ow, tw := int64(0), int64(0)
+	if s.p1.score >= 21 {
+		return wins{p1: 1}
+	} else if s.p2.score >= 21 {
+		return wins{p2: 1}
+	}
+
 	for i := 1; i <= 3; i++ {
 		for j := 1; j <= 3; j++ {
 			for k := 1; k <= 3; k++ {
-				o, t := turn(s.next(i + j + k))
-				ow += o
-				tw += t
+				nw := turn(s.next(i + j + k))
+				w.p1 += nw.p1
+				w.p2 += nw.p2
 			}
 		}
 	}
 
-	return ow, tw
+	cache[s] = w
+	return w
 }
 func main() {
-	c, err := ioutil.ReadFile("./data-smol.txt")
+	c, err := ioutil.ReadFile("./data.txt")
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		os.Exit(1)
@@ -70,9 +82,8 @@ func main() {
 		p1Active: true,
 	}
 
-	ow, tw := turn(s)
-	fmt.Println(ow)
-	fmt.Println(tw)
+	wins := turn(s)
+	fmt.Println(wins)
 }
 
 func parse(s string) player {
