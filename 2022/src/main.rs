@@ -12,11 +12,48 @@ fn day_two() {
     for round in data.split("\n") {
         let mut r = round.split(" ");
         let opponent = Move::parse(r.next().unwrap());
-        let us = Move::parse(r.next().unwrap());
-        score += us.play_round(&opponent);
+        let outcome = Outcome::parse(r.next().unwrap());
+        score += outcome.play_round(&opponent);
     }
 
     println!("{}", score);
+}
+
+enum Outcome {
+    Win,
+    Lose,
+    Draw,
+}
+
+impl Outcome {
+    fn parse(raw_move: &str) -> Self {
+        match raw_move {
+            "X" => Self::Lose,
+            "Y" => Self::Draw,
+            "Z" => Self::Win,
+            _ => panic!("unexpected move type"),
+        }
+    }
+
+    fn play_round(&self, other: &Move) -> i32 {
+        match self {
+            Self::Win => match other {
+                Move::Rock => 8,
+                Move::Paper => 9,
+                Move::Scissors => 7,
+            },
+            Self::Lose => match other {
+                Move::Rock => 3,
+                Move::Paper => 1,
+                Move::Scissors => 2,
+            },
+            Self::Draw => match other {
+                Move::Rock => 4,
+                Move::Paper => 5,
+                Move::Scissors => 6,
+            },
+        }
+    }
 }
 
 enum Move {
