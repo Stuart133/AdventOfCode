@@ -1,8 +1,65 @@
-use std::{fs::File, io::Read, path::Path};
+use std::{fs::File, io::Read, path::Path, collections::HashSet};
 
 fn main() {
     day_one();
     day_two();
+    day_three();
+}
+
+fn day_three() {
+    let data = read_file_to_string(Path::new("data/3.txt"));
+
+    let mut common = vec![];
+    for bag in data.split("\n") {
+        let (one, two) = bag.split_at(bag.len() / 2);
+        let mut items = HashSet::new();
+        for item in one.chars() {
+            items.insert(item);
+        }
+
+        let mut added = HashSet::new();
+        for item in two.chars() {
+            if items.contains(&item) && !added.contains(&item) {
+                common.push(item);
+                added.insert(item);
+            }
+        }
+    }
+
+    let score = common.iter().fold(0, |acc, item| {
+        if item.is_uppercase() {
+            acc + *item as u32 - 38
+        } else {
+            acc + *item as u32 - 96
+        }
+    });
+
+    println!("{}", score);
+
+    let collect: Vec<&str> = data.split("\n").collect();
+    let mut badges = vec![];
+    for group in collect.chunks(3) {
+        let mut common = vec![HashSet::new(), HashSet::new(), HashSet::new()];
+        for i in 0..3 {
+            for item in group[i].chars() {
+                common[i].insert(item);
+            }
+        }
+
+        let first = common[0].intersection(&common[1]).copied().collect();
+        let badge = common[2].intersection(&first).next().unwrap();
+        badges.push(badge.clone());
+    }
+    let score = badges.iter().fold(0, |acc, item| {
+        if item.is_uppercase() {
+            acc + *item as u32 - 38
+        } else {
+            acc + *item as u32 - 96
+        }
+    });
+
+
+    println!("{:?}", score);
 }
 
 fn day_two() {
