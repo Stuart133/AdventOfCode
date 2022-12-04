@@ -1,11 +1,65 @@
-use std::{fs::File, io::Read, path::Path, collections::HashSet};
+use std::{collections::HashSet, fs::File, io::Read, path::Path};
 
 fn main() {
-    day_one();
-    day_two();
-    day_three();
+    day_four();
 }
 
+fn day_four() {
+    let data = read_file_to_string(Path::new("data/4.txt"));
+
+    let score = data
+        .split("\n")
+        .map(|assign| {
+            let assignments: Vec<Interval> = assign
+                .split(",")
+                .map(|assign| Interval::parse(assign))
+                .collect();
+
+            println!("{:?}", assignments);
+
+            (
+                (assignments[0].start <= assignments[1].end
+                    && assignments[0].end >= assignments[1].end)
+                    || (assignments[1].start <= assignments[0].start
+                        && assignments[1].end >= assignments[0].end),
+                (assignments[0].start <= assignments[1].end
+                    && assignments[0].end >= assignments[1].start)
+                    || (assignments[1].start <= assignments[0].end
+                        && assignments[1].end >= assignments[0].start),
+            )
+        })
+        .fold((0, 0), |acc, overlap| {
+            if overlap.0 && overlap.1 {
+                (acc.0 + 1, acc.1 + 1)
+            } else if overlap.1 {
+                (acc.0, acc.1 + 1)
+            } else if overlap.0 {
+                (acc.0 + 1, acc.1)
+            } else {
+                acc
+            }
+        });
+
+    println!("{:?}", score);
+}
+
+#[derive(Debug)]
+struct Interval {
+    start: u32,
+    end: u32,
+}
+
+impl Interval {
+    fn parse(input: &str) -> Self {
+        let interval: Vec<&str> = input.split("-").collect();
+        Interval {
+            start: str::parse(interval[0]).unwrap(),
+            end: str::parse(interval[1]).unwrap(),
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_three() {
     let data = read_file_to_string(Path::new("data/3.txt"));
 
@@ -58,10 +112,10 @@ fn day_three() {
         }
     });
 
-
     println!("{:?}", score);
 }
 
+#[allow(dead_code)]
 fn day_two() {
     let data = read_file_to_string(Path::new("data/2.txt"));
 
@@ -129,6 +183,7 @@ impl Move {
         }
     }
 
+    #[allow(dead_code)]
     fn play_round(&self, other: &Move) -> i32 {
         match self {
             Move::Rock => match other {
@@ -150,6 +205,7 @@ impl Move {
     }
 }
 
+#[allow(dead_code)]
 fn day_one() {
     let data = read_file_to_string(Path::new("data/1.txt"));
 
