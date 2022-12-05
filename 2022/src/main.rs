@@ -1,9 +1,70 @@
-use std::{collections::HashSet, fs::File, io::Read, path::Path};
+use std::{
+    collections::{HashSet, VecDeque},
+    fs::File,
+    io::Read,
+    path::Path,
+};
 
 fn main() {
-    day_four();
+    day_five();
 }
 
+fn day_five() {
+    let data = read_file_to_string(Path::new("data/5.txt"));
+
+    let mut stacks: [VecDeque<char>; 9] = Default::default();
+    let mut lines = data.split("\n");
+    while let Some(line) = lines.next() {
+        if line.chars().nth(1).unwrap().is_numeric() {
+            break;
+        }
+
+        for (i, char) in line.chars().enumerate() {
+            if char == '[' || char == ']' || char == ' ' {
+                continue;
+            }
+
+            stacks[(i - 1) / 4].push_back(char);
+        }
+    }
+    lines.next();
+
+    for line in lines {
+        let crane_move = CraneMove::parse(line);
+        let items: Vec<char> = stacks[crane_move.src].drain(0..crane_move.count).collect();
+        for item in items.iter().rev() {
+            stacks[crane_move.dest].push_front(*item);
+        }
+    }
+
+    let answer = stacks.map(|stack| stack.front().unwrap().clone());
+
+    println!("{:?}", answer);
+}
+
+#[derive(Debug)]
+struct CraneMove {
+    count: usize,
+    src: usize,
+    dest: usize,
+}
+
+impl CraneMove {
+    fn parse(raw: &str) -> Self {
+        let mut input = [0; 3];
+        for (i, item) in raw.split(" ").skip(1).step_by(2).enumerate() {
+            input[i] = str::parse(item).unwrap();
+        }
+
+        CraneMove {
+            count: input[0],
+            src: input[1] - 1,
+            dest: input[2] - 1,
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_four() {
     let data = read_file_to_string(Path::new("data/4.txt"));
 
