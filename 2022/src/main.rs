@@ -6,9 +6,25 @@ use std::{
 };
 
 fn main() {
-    day_five();
+    day_six();
 }
 
+fn day_six() {
+    let data = read_file_to_string(Path::new("data/6.txt"));
+
+    for (i, window) in data.as_bytes().windows(14).enumerate() {
+        let mut set = HashSet::new();
+        for item in window {
+            set.insert(*item);
+        }
+        if set.len() == 14 {
+            println!("{}", i + 14);
+            break;
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_five() {
     let data = read_file_to_string(Path::new("data/5.txt"));
 
