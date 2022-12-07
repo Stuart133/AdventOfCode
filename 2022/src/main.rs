@@ -1,14 +1,127 @@
 use std::{
+    cell::RefCell,
     collections::{HashSet, VecDeque},
     fs::File,
     io::Read,
     path::Path,
+    rc::Rc,
 };
 
 fn main() {
-    day_six();
+    day_seven();
 }
 
+fn day_seven() {
+    let data = read_file_to_string(Path::new("data/7.txt"));
+
+    let root = PuzzleDir {
+        name: "/".to_string(),
+        dirs: vec![],
+        files: vec![],
+        parent: None,
+    };
+    let mut current = Rc::new(RefCell::new(root));
+    let root = current.clone();
+
+    for line in data.split("\n").skip(1) {
+        if line.chars().nth(0).unwrap() == '$' {
+            let command: Vec<&str> = line.split(" ").skip(1).collect();
+            if command[0] == "cd" {
+                if command[1] != ".." {
+                    let t = current
+                        .borrow()
+                        .dirs
+                        .iter()
+                        .find(|d| d.borrow().name == command[1])
+                        .expect("failed to find dir")
+                        .clone();
+
+                    current = t;
+                } else {
+                    let t = current.borrow().parent.clone();
+                    current = t.unwrap();
+                }
+            }
+        } else {
+            let output: Vec<&str> = line.split(" ").collect();
+            if output[0] == "dir" {
+                let dir = PuzzleDir {
+                    name: output[1].to_string(),
+                    dirs: vec![],
+                    files: vec![],
+                    parent: Some(current.clone()),
+                };
+
+                current.borrow_mut().dirs.push(Rc::new(RefCell::new(dir)));
+            } else {
+                let file = PuzzleFile {
+                    size: str::parse(output[0]).unwrap(),
+                    name: output[1].to_string(),
+                };
+
+                current.borrow_mut().files.push(file);
+            }
+        }
+    }
+
+    for dir in root.borrow().dirs.iter() {
+        dir.borrow().print_size();
+    }
+
+    println!("{}", root.borrow().add_size(100_000));
+}
+
+#[derive(Clone, Debug)]
+struct PuzzleFile {
+    name: String,
+    size: usize,
+}
+
+#[derive(Clone, Debug)]
+struct PuzzleDir {
+    name: String,
+    dirs: Vec<Rc<RefCell<PuzzleDir>>>,
+    files: Vec<PuzzleFile>,
+    parent: Option<Rc<RefCell<PuzzleDir>>>,
+}
+
+impl PuzzleDir {
+    fn size(&self) -> usize {
+        let score: usize = self.files.iter().map(|f| f.size).sum();
+
+        score
+            + self
+                .dirs
+                .iter()
+                .map(|dir| dir.borrow().size())
+                .sum::<usize>()
+    }
+
+    fn print_size(&self) {
+        if self.size() < 100_000 {
+            println!("{} {}", self.name, self.size());
+        }
+
+        for dir in self.dirs.iter() {
+            dir.borrow().print_size();
+        }
+    }
+
+    fn add_size(&self, threshold: usize) -> usize {
+        let mut size = 0;
+        if self.size() < 100_000 {
+            size += self.size();
+        }
+
+        for dir in self.dirs.iter() {
+            size += dir.borrow().add_size(threshold);
+        }
+
+        size
+    }
+}
+
+#[allow(dead_code)]
 fn day_six() {
     let data = read_file_to_string(Path::new("data/6.txt"));
 
