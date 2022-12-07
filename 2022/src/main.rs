@@ -56,7 +56,6 @@ fn day_seven() {
             } else {
                 let file = PuzzleFile {
                     size: str::parse(output[0]).unwrap(),
-                    name: output[1].to_string(),
                 };
 
                 current.borrow_mut().files.push(file);
@@ -64,16 +63,14 @@ fn day_seven() {
         }
     }
 
-    for dir in root.borrow().dirs.iter() {
-        dir.borrow().print_size();
-    }
-
     println!("{}", root.borrow().add_size(100_000));
+
+    let to_find = root.borrow().size() - 40000000;
+    println!("{}", root.borrow().find_to_delete(to_find));
 }
 
 #[derive(Clone, Debug)]
 struct PuzzleFile {
-    name: String,
     size: usize,
 }
 
@@ -97,14 +94,20 @@ impl PuzzleDir {
                 .sum::<usize>()
     }
 
-    fn print_size(&self) {
-        if self.size() < 100_000 {
-            println!("{} {}", self.name, self.size());
+    fn find_to_delete(&self, threshold: usize) -> usize {
+        let mut current = if self.size() >= threshold {
+            self.size()
+        } else {
+            usize::MAX
+        };
+        for dir in self.dirs.iter() {
+            let to_del = dir.borrow().find_to_delete(threshold);
+            if to_del < current {
+                current = to_del;
+            }
         }
 
-        for dir in self.dirs.iter() {
-            dir.borrow().print_size();
-        }
+        current
     }
 
     fn add_size(&self, threshold: usize) -> usize {
