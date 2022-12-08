@@ -8,9 +8,73 @@ use std::{
 };
 
 fn main() {
-    day_seven();
+    day_eight();
 }
 
+#[allow(dead_code)]
+fn day_eight() {
+    let data = read_file_to_string(Path::new("data/8.txt"));
+
+    let mut grid = vec![];
+    for (i, line) in data.lines().enumerate() {
+        grid.push(vec![]);
+        for item in line.chars() {
+            grid[i].push(item.to_digit(10).unwrap());
+        }
+    }
+
+    let mut best_scenic = 0;
+    for i in 0..grid.len() {
+        for j in 0..grid[i].len() {
+            let tree = grid[i][j];
+
+            let mut scenic = 1;
+            let mut distance = 0;
+            for k in 0..i {
+                distance += 1;
+                if grid[i - (k + 1)][j] >= tree {
+                    break;
+                }
+            }
+            scenic *= distance;
+            distance = 0;
+
+            for k in 0..j {
+                distance += 1;
+                if grid[i][j - (k + 1)] >= tree {
+                    break;
+                }
+            }
+            scenic *= distance;
+            distance = 0;
+
+            for k in 0..grid.len() - i - 1 {
+                distance += 1;
+                if grid[i + k + 1][j] >= tree {
+                    break;
+                }
+            }
+            scenic *= distance;
+            distance = 0;
+
+            for k in 0..grid[i].len() - j - 1 {
+                distance += 1;
+                if grid[i][j + k + 1] >= tree {
+                    break;
+                }
+            }
+            scenic *= distance;
+
+            if scenic > best_scenic {
+                best_scenic = scenic;
+            }
+        }
+    }
+
+    println!("{:?}", best_scenic);
+}
+
+#[allow(dead_code)]
 fn day_seven() {
     let data = read_file_to_string(Path::new("data/7.txt"));
 
