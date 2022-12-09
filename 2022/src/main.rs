@@ -8,7 +8,55 @@ use std::{
 };
 
 fn main() {
-    day_eight();
+    day_nine();
+}
+
+fn day_nine() {
+    let data = read_file_to_string(Path::new("data/9.txt"));
+
+    let mut visited = HashSet::new();
+    visited.insert((0, 0));
+    let mut rope = vec![(0, 0); 10];
+
+    for motion in data.lines() {
+        let command: Vec<&str> = motion.split(' ').collect();
+        let count: u32 = str::parse(command[1]).unwrap();
+        for _ in 0..count {
+            rope[0] = match command[0] {
+                "R" => (rope[0].0 + 1, rope[0].1),
+                "L" => (rope[0].0 - 1, rope[0].1),
+                "U" => (rope[0].0, rope[0].1 + 1),
+                "D" => (rope[0].0, rope[0].1 - 1),
+                _ => panic!(),
+            };
+
+            for i in 1..rope.len() {
+                rope[i] = move_tail(rope[i - 1], rope[i]);
+            }
+            visited.insert(rope[rope.len() - 1]);
+        }
+    }
+
+    println!("{:?}", visited.len());
+}
+
+fn move_tail(head: (i32, i32), tail: (i32, i32)) -> (i32, i32) {
+    if head.0.abs_diff(tail.0) <= 1 && head.1.abs_diff(tail.1) <= 1 {
+        return tail;
+    }
+
+    let mut out = tail;
+    let diff0 = if tail.0 - head.0 > 0 { -1 } else { 1 };
+    let diff1 = if tail.1 - head.1 > 0 { -1 } else { 1 };
+
+    if head.0 != tail.0 {
+        out.0 += diff0;
+    }
+    if head.1 != tail.1 {
+        out.1 += diff1;
+    }
+
+    out
 }
 
 #[allow(dead_code)]
