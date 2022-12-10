@@ -8,9 +8,61 @@ use std::{
 };
 
 fn main() {
-    day_nine();
+    day_ten();
 }
 
+fn day_ten() {
+    let data = read_file_to_string(Path::new("data/10.txt"));
+
+    let mut current: isize = 1;
+    let mut score: isize = 0;
+    let mut cycle = 0;
+    let mut screen = [false; 240];
+    for raw_op in data.lines() {
+        cycle += 1;
+        let op: Vec<&str> = raw_op.split(' ').collect();
+        if (cycle - 20) % 40 == 0 {
+            println!("{} {}", cycle, current);
+            score += current * cycle;
+        }        
+        if ((cycle - 1) % 40).abs_diff(current) <= 1 {
+            screen[(cycle - 1) as usize] = true
+        }
+
+        match op[0] {
+            "noop" => {
+            },
+            "addx" => {
+                cycle += 1;
+
+                if ((cycle - 1) % 40).abs_diff(current) <= 1 {
+                    screen[(cycle - 1) as usize] = true
+                }
+                if (cycle - 20) % 40 == 0 {
+                    println!("{} {}", cycle, current);
+                    score += current * cycle;
+                }
+                current += str::parse::<isize>(op[1]).unwrap();
+            },
+            _ => panic!(),
+        };
+    }
+
+    println!("{}", score);
+    for i in 1..screen.len() + 1 {
+        print!("{}", if screen[i - 1] {
+            "#"
+        } else {
+            "."
+        });
+
+        if i % 40 == 0 {
+            println!();
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_nine() {
     let data = read_file_to_string(Path::new("data/9.txt"));
 
