@@ -22,7 +22,6 @@ fn day_ten() {
         cycle += 1;
         let op: Vec<&str> = raw_op.split(' ').collect();
         if (cycle - 20) % 40 == 0 {
-            println!("{} {}", cycle, current);
             score += current * cycle;
         }        
         if ((cycle - 1) % 40).abs_diff(current) <= 1 {
@@ -39,7 +38,6 @@ fn day_ten() {
                     screen[(cycle - 1) as usize] = true
                 }
                 if (cycle - 20) % 40 == 0 {
-                    println!("{} {}", cycle, current);
                     score += current * cycle;
                 }
                 current += str::parse::<isize>(op[1]).unwrap();
