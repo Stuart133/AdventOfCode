@@ -4,13 +4,115 @@ use std::{
     fs::File,
     io::Read,
     path::Path,
-    rc::Rc,
+    rc::Rc, cmp::Ordering,
 };
 
 fn main() {
-    day_ten();
+    day_eleven();
 }
 
+fn day_eleven() {
+    let mut monkeys = vec![Monkey {
+        items: VecDeque::from_iter(vec![79, 98]),
+        operation: |old| {
+            old * 19
+        },
+        test: |old| {
+            if old % 23 == 0 {
+                2
+            } else {
+                3
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![54, 65, 75, 74]),
+        operation: |old| {
+            old + 6
+        },
+        test: |old| {
+            if old % 19 == 0 {
+                2
+            } else {
+                0
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![79, 60, 97]),
+        operation: |old| {
+            old * old
+        },
+        test: |old| {
+            if old % 13 == 0 {
+                1
+            } else {
+                3
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![74]),
+        operation: |old| {
+            old + 3
+        },
+        test: |old| {
+            if old % 17 == 0 {
+                0
+            } else {
+                1
+            }
+        },
+        inspected: 0,
+    },
+    ];
+
+    for _ in 0..20 {
+        for i in 0..monkeys.len() {
+            for j in 0..monkeys[i].items.len() {
+                monkeys[i].inspected += 1;
+                let new = (monkeys[i].operation)(monkeys[i].items[j]) / 3;
+                let new_monkey = (monkeys[i].test)(new);
+                monkeys[new_monkey].items.push_back(new);
+            }
+            monkeys[i].items.clear()
+        }
+    }
+
+    monkeys.sort();
+    println!("{:?}", monkeys[monkeys.len() - 1].inspected * monkeys[monkeys.len() - 2].inspected);
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Monkey {
+    items: VecDeque<i64>,
+    operation: fn(i64) -> i64,
+    test: fn(i64) -> usize,
+    inspected: usize,
+}
+
+impl PartialOrd for Monkey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Monkey {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self.inspected > other.inspected {
+            Ordering::Greater
+        } else if self.inspected == other.inspected {
+            Ordering::Equal
+        } else {
+            Ordering::Less
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_ten() {
     let data = read_file_to_string(Path::new("data/10.txt"));
 
