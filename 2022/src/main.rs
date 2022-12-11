@@ -12,14 +12,86 @@ fn main() {
 }
 
 fn day_eleven() {
+    // let mut monkeys = vec![Monkey {
+    //     items: VecDeque::from_iter(vec![79, 98]),
+    //     operation: |old| {
+    //         old * 19
+    //     },
+    //     test: |old| {
+    //         if old % 23 == 0 {
+    //             2
+    //         } else {
+    //             3
+    //         }
+    //     },
+    //     inspected: 0,
+    // },
+    // Monkey {
+    //     items: VecDeque::from_iter(vec![54, 65, 75, 74]),
+    //     operation: |old| {
+    //         old + 6
+    //     },
+    //     test: |old| {
+    //         if old % 19 == 0 {
+    //             2
+    //         } else {
+    //             0
+    //         }
+    //     },
+    //     inspected: 0,
+    // },
+    // Monkey {
+    //     items: VecDeque::from_iter(vec![79, 60, 97]),
+    //     operation: |old| {
+    //         old * old
+    //     },
+    //     test: |old| {
+    //         if old % 13 == 0 {
+    //             1
+    //         } else {
+    //             3
+    //         }
+    //     },
+    //     inspected: 0,
+    // },
+    // Monkey {
+    //     items: VecDeque::from_iter(vec![74]),
+    //     operation: |old| {
+    //         old + 3
+    //     },
+    //     test: |old| {
+    //         if old % 17 == 0 {
+    //             0
+    //         } else {
+    //             1
+    //         }
+    //     },
+    //     inspected: 0,
+    // },
+    // ];
+
     let mut monkeys = vec![Monkey {
-        items: VecDeque::from_iter(vec![79, 98]),
+        items: VecDeque::from_iter(vec![91, 66]),
         operation: |old| {
-            old * 19
+            old * 13
         },
         test: |old| {
-            if old % 23 == 0 {
+            if old % 19 == 0 {
+                6
+            } else {
                 2
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![78, 97, 59]),
+        operation: |old| {
+            old + 7
+        },
+        test: |old| {
+            if old % 5 == 0 {
+                0
             } else {
                 3
             }
@@ -27,13 +99,27 @@ fn day_eleven() {
         inspected: 0,
     },
     Monkey {
-        items: VecDeque::from_iter(vec![54, 65, 75, 74]),
+        items: VecDeque::from_iter(vec![57, 59, 97, 84, 72, 83, 56, 76]),
         operation: |old| {
             old + 6
         },
         test: |old| {
-            if old % 19 == 0 {
-                2
+            if old % 11 == 0 {
+                5
+            } else {
+                7
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![81, 78, 70, 58, 84]),
+        operation: |old| {
+            old + 5
+        },
+        test: |old| {
+            if old % 17 == 0 {
+                6
             } else {
                 0
             }
@@ -41,12 +127,12 @@ fn day_eleven() {
         inspected: 0,
     },
     Monkey {
-        items: VecDeque::from_iter(vec![79, 60, 97]),
+        items: VecDeque::from_iter(vec![60]),
         operation: |old| {
-            old * old
+            old + 8
         },
         test: |old| {
-            if old % 13 == 0 {
+            if old % 7 == 0 {
                 1
             } else {
                 3
@@ -55,34 +141,69 @@ fn day_eleven() {
         inspected: 0,
     },
     Monkey {
-        items: VecDeque::from_iter(vec![74]),
+        items: VecDeque::from_iter(vec![57, 69, 63, 75, 62, 77, 72]),
         operation: |old| {
-            old + 3
+            old * 5
         },
         test: |old| {
-            if old % 17 == 0 {
-                0
+            if old % 13 == 0 {
+                7
             } else {
+                4
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![73, 66, 86, 79, 98, 87]),
+        operation: |old| {
+            old * old
+        },
+        test: |old| {
+            if old % 3 == 0 {
+                5
+            } else {
+                2
+            }
+        },
+        inspected: 0,
+    },
+    Monkey {
+        items: VecDeque::from_iter(vec![95, 89, 63, 67]),
+        operation: |old| {
+            old + 2
+        },
+        test: |old| {
+            if old % 2 == 0 {
                 1
+            } else {
+                4
             }
         },
         inspected: 0,
     },
     ];
 
-    for _ in 0..20 {
+    let product = 19 * 5 * 11 * 17 * 7 * 13 * 3 * 2;
+    for _ in 0..10000 {
         for i in 0..monkeys.len() {
             for j in 0..monkeys[i].items.len() {
                 monkeys[i].inspected += 1;
-                let new = (monkeys[i].operation)(monkeys[i].items[j]) / 3;
+                let new = (monkeys[i].operation)(monkeys[i].items[j]) % product;
                 let new_monkey = (monkeys[i].test)(new);
                 monkeys[new_monkey].items.push_back(new);
             }
             monkeys[i].items.clear()
         }
+
+        for i in 0..monkeys.len() {
+            println!("{} - {:?}", i, monkeys[i].inspected);
+        }
+        println!();
     }
 
     monkeys.sort();
+    println!("{:?}", monkeys);
     println!("{:?}", monkeys[monkeys.len() - 1].inspected * monkeys[monkeys.len() - 2].inspected);
 }
 
