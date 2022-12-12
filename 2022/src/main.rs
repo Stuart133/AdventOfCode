@@ -8,9 +8,83 @@ use std::{
 };
 
 fn main() {
-    day_eleven();
+    day_twelve();
 }
 
+fn day_twelve() {
+    let data = read_file_to_string(Path::new("data/12.txt"));
+    let goal = 'z' as u32;
+    let mut starts = vec![];
+
+    let mut grid = vec![];
+    for (i, line) in data.lines().enumerate() {
+        grid.push(vec![]);
+        for (j, char) in line.chars().enumerate() {
+            if char == 'E' {
+                grid[i].push(goal);
+            } else if char == 'S' || char == 'a' {
+                grid[i].push('a' as u32);
+                starts.push((j, i));
+            } else {
+                grid[i].push(char as u32);
+            }
+        }
+    }
+
+    let mut score = u32::MAX;
+
+    for start in starts {
+        let mut visited = HashSet::new();
+        let mut paths = VecDeque::new();  
+        paths.push_back(GridPath{ steps: 0, position: start});
+
+        while paths.len() != 0 {
+            let path = paths.pop_front().unwrap();
+            if grid[path.position.1][path.position.0] == goal {
+                score = score.min(path.steps + 1);
+                break;
+            }
+    
+            if visited.contains(&path.position) {
+                continue;
+            }
+    
+            visited.insert(path.position);
+    
+            // Generate new moves
+            let mut moves = vec![];
+            if path.position.0 != 0 {
+                moves.push((path.position.0 - 1, path.position.1));
+            }
+            if path.position.1 != 0 {
+                moves.push((path.position.0, path.position.1 - 1));
+            }
+            if path.position.0 < grid[path.position.1].len() - 1 {
+                moves.push((path.position.0 + 1, path.position.1));
+            }
+            if path.position.1 < grid.len() - 1 {
+                moves.push((path.position.0, path.position.1 + 1));
+            }
+    
+            moves = moves.into_iter().filter(|m| {
+                grid[path.position.1][path.position.0] + 1 >= grid[m.1][m.0]
+            }).collect();
+            for m in moves {
+                paths.push_back(GridPath { steps: path.steps + 1, position: m });
+            }
+        }   
+    }
+
+    println!("{}", score);
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+struct GridPath {
+    steps: u32,
+    position: (usize, usize),
+}
+
+#[allow(dead_code)]
 fn day_eleven() {
     // let mut monkeys = vec![Monkey {
     //     items: VecDeque::from_iter(vec![79, 98]),
