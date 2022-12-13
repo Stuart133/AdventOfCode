@@ -7,10 +7,146 @@ use std::{
     rc::Rc, cmp::Ordering,
 };
 
+use itertools::Itertools;
+
 fn main() {
-    day_twelve();
+    day_thirteen();
 }
 
+fn day_thirteen() {
+    let data = read_file_to_string(Path::new("data/13.txt"));
+    let mut score = 0;
+
+    for (i, packet) in data.split("\n\n").enumerate() {
+        let pair: Vec<SignalItem> = packet.split("\n").map(|s| {
+            SignalItem::new(s)
+        }).collect();
+
+        if let Some(false) = pair[0].compare(&pair[1]) {
+            
+        } else {
+            score += i + 1;
+        }
+    }
+
+    let list = data.split("\n").filter(|l| *l != "").map(|s| {
+        SignalItem::new(s)
+    }).sorted_by(|one, other| {
+        one.cmp(other)
+    }).collect_vec();
+
+    println!("{}", score);
+    println!("{:?}", list.binary_search(&SignalItem::List(vec![SignalItem::List(vec![SignalItem::Number(6)])])));
+    println!("{:?}", list.binary_search(&SignalItem::List(vec![SignalItem::List(vec![SignalItem::Number(2)])])));
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SignalItem {
+    Number(i64),
+    List(Vec<SignalItem>)
+}
+
+impl SignalItem {
+    fn new(raw: &str) -> Self {
+        let mut lists = VecDeque::new();
+        let mut digits = "".to_string();
+
+        for char in raw.chars() {
+            match char {
+                '[' => {
+                    lists.push_front(vec![]);
+                },
+                ']' => {
+                    if digits != "" {
+                        let number = str::parse(&digits).unwrap();
+                        digits = "".to_string();
+                        lists.get_mut(0).unwrap().push(SignalItem::Number(number));
+                    }
+
+                    if lists.len() != 1 {
+                        let finished = lists.pop_front().unwrap();
+                        lists.get_mut(0).unwrap().push(SignalItem::List(finished));
+                    } else {
+                        return SignalItem::List(lists.pop_front().unwrap());
+                    }
+                },
+                '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                    digits.push(char);
+                },
+                ',' => {
+                    if digits != "" {
+                        let number = str::parse(&digits).unwrap();
+                        digits = "".to_string();
+                        lists.get_mut(0).unwrap().push(SignalItem::Number(number));
+                    }
+                }
+                _ => panic!("Char was {}", char),
+            }
+        }
+
+        panic!();
+    }
+
+    fn compare(&self, other: &Self) -> Option<bool> {
+        match self {
+            SignalItem::Number(n) => match other {
+                SignalItem::Number(on) => {
+                   if n == on {
+                    None
+                   } else {
+                    Some(n < on)
+                   }
+                },
+                SignalItem::List(_) => {
+                    SignalItem::List(vec![SignalItem::Number(*n)]).compare(other)
+                },
+            },
+            SignalItem::List(l) => match other {
+                SignalItem::Number(n) => {
+                    self.compare(&SignalItem::List(vec![SignalItem::Number(*n)]))
+                },
+                SignalItem::List(ol) => {
+                    for i in 0..l.len() {
+                        if i >= ol.len() {
+                            return Some(false);
+                        }
+
+                        if let Some(res) = l[i].compare(&ol[i]) {
+                            return Some(res);
+                        }
+                    }
+
+                    if l.len() != ol.len() {
+                        return Some(true);
+                    }
+
+                    return None;
+                },
+            },
+        }
+    }
+}
+
+impl PartialOrd for SignalItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for SignalItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.compare(other) {
+            Some(res) => if res {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            },
+            None => Ordering::Equal,
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_twelve() {
     let data = read_file_to_string(Path::new("data/12.txt"));
     let goal = 'z' as u32;
