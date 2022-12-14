@@ -10,9 +10,75 @@ use std::{
 use itertools::Itertools;
 
 fn main() {
-    day_thirteen();
+    day_fourteen();
 }
 
+fn day_fourteen() {
+    let data = read_file_to_string(Path::new("data/14.txt"));
+
+    let mut grid = [[false; 400]; 400];
+    let mut floor = 2;
+    for line in data.lines() {
+        let mut coords = line.split(" -> ");
+        let mut current = coords.next().unwrap().split(",").map(|s| str::parse::<i64>(s).unwrap()).collect_vec();
+        for coord in coords {
+            let next = coord.split(",").map(|s| str::parse::<i64>(s).unwrap()).collect_vec();
+            let change = if next[0] > current[0] {
+                (1, 0)
+            } else if next[0] < current[0] {
+                (-1 ,0)
+            } else if next[1] > current[1] {
+                (0, 1)
+            } else {
+                (0, -1)
+            };
+
+            while current[0] != next[0] || current[1] != next[1] {
+                floor = floor.max(current[1] as usize + 2);
+                grid[current[0] as usize - 300][current[1] as usize] = true;
+
+                current[0] += change.0;
+                current[1] += change.1;
+            }
+            floor = floor.max(current[1] as usize + 2);
+            grid[current[0] as usize - 300][current[1] as usize] = true;
+        }
+    }
+    for i in 0..grid.len() {
+        grid[i][floor] = true;
+    }
+
+    println!("{}", floor);
+
+    let mut total = 0;
+    let mut fallen = false;
+    while !fallen {
+        let mut current = (200, 0);
+        loop {
+            if !grid[current.0][current.1 + 1] {
+                current.1 += 1;
+            } else if !grid[current.0 - 1][current.1 + 1] {
+                current.0 -= 1;
+                current.1 += 1;
+            } else if !grid[current.0 + 1][current.1 + 1] {
+                current.0 += 1;
+                current.1 += 1;
+            } else {
+                if grid[current.0][current.1] {
+                    fallen = true;
+                    break;
+                }
+                grid[current.0][current.1] = true;
+                total += 1;
+                break;
+            }
+        }
+    }
+
+    println!("{total}");
+}
+
+#[allow(dead_code)]
 fn day_thirteen() {
     let data = read_file_to_string(Path::new("data/13.txt"));
     let mut score = 0;
