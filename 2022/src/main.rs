@@ -1,18 +1,90 @@
 use std::{
     cell::RefCell,
-    collections::{HashSet, VecDeque},
+    cmp::Ordering,
+    collections::{hash_map::RandomState, HashMap, HashSet, VecDeque},
     fs::File,
     io::Read,
     path::Path,
-    rc::Rc, cmp::Ordering,
+    rc::Rc,
 };
 
 use itertools::Itertools;
 
 fn main() {
-    day_fourteen();
+    day_fifteen();
 }
 
+fn day_fifteen() {
+    let row: i64 = 10;
+    let data = read_file_to_string(Path::new("data/15_smol.txt"));
+
+    let mut grid: HashMap<i64, HashSet<i64, RandomState>> = HashMap::new();
+    let sensors = data
+        .lines()
+        .map(|l| {
+            let parts = l.split(':').collect_vec();
+            let sensor: String = parts[0].chars().skip(10).collect();
+            let (sx, sy): (i64, i64) = sensor
+                .split(", ")
+                .map(|s| s.split('=').skip(1).next().unwrap())
+                .map(|s| str::parse(s).unwrap())
+                .collect_tuple()
+                .unwrap();
+
+            let beacon: String = parts[1].chars().skip(21).collect();
+            let (bx, by): (i64, i64) = beacon
+                .split(", ")
+                .map(|s| s.split('=').skip(1).next().unwrap())
+                .map(|s| str::parse(s).unwrap())
+                .collect_tuple()
+                .unwrap();
+
+            Sensor {
+                x: sx,
+                y: sy,
+                beacon_x: bx,
+                beacon_y: by,
+            }
+        })
+        .collect_vec();
+
+    for sensor in sensors {
+        let manhatten = (sensor.x - sensor.beacon_x).abs() + (sensor.y - sensor.beacon_y).abs();
+        // println!("{}", row.abs_diff(sensor.y));
+        // if row.abs_diff(sensor.y) > manhatten as u64 {
+        //     continue;
+        // }
+
+        for i in -manhatten..manhatten + 1 {
+            for j in -manhatten..manhatten + 1 {
+                if i.abs() + j.abs() > manhatten {
+                    continue;
+                }
+
+                match grid.get_mut(&(j + sensor.y)) {
+                    Some(inner) => {
+                        inner.insert(i + sensor.x);
+                    }
+                    None => {
+                        grid.insert(j + sensor.y, HashSet::from_iter(vec![i + sensor.x]));
+                    }
+                };
+            }
+        }
+    }
+
+    println!("{:?}", grid.get(&row).unwrap().len() - 1);
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+struct Sensor {
+    x: i64,
+    y: i64,
+    beacon_x: i64,
+    beacon_y: i64,
+}
+
+#[allow(dead_code)]
 fn day_fourteen() {
     let data = read_file_to_string(Path::new("data/14.txt"));
 
@@ -20,13 +92,21 @@ fn day_fourteen() {
     let mut floor = 2;
     for line in data.lines() {
         let mut coords = line.split(" -> ");
-        let mut current = coords.next().unwrap().split(",").map(|s| str::parse::<i64>(s).unwrap()).collect_vec();
+        let mut current = coords
+            .next()
+            .unwrap()
+            .split(",")
+            .map(|s| str::parse::<i64>(s).unwrap())
+            .collect_vec();
         for coord in coords {
-            let next = coord.split(",").map(|s| str::parse::<i64>(s).unwrap()).collect_vec();
+            let next = coord
+                .split(",")
+                .map(|s| str::parse::<i64>(s).unwrap())
+                .collect_vec();
             let change = if next[0] > current[0] {
                 (1, 0)
             } else if next[0] < current[0] {
-                (-1 ,0)
+                (-1, 0)
             } else if next[1] > current[1] {
                 (0, 1)
             } else {
@@ -84,32 +164,40 @@ fn day_thirteen() {
     let mut score = 0;
 
     for (i, packet) in data.split("\n\n").enumerate() {
-        let pair: Vec<SignalItem> = packet.split("\n").map(|s| {
-            SignalItem::new(s)
-        }).collect();
+        let pair: Vec<SignalItem> = packet.split("\n").map(|s| SignalItem::new(s)).collect();
 
         if let Some(false) = pair[0].compare(&pair[1]) {
-            
         } else {
             score += i + 1;
         }
     }
 
-    let list = data.split("\n").filter(|l| *l != "").map(|s| {
-        SignalItem::new(s)
-    }).sorted_by(|one, other| {
-        one.cmp(other)
-    }).collect_vec();
+    let list = data
+        .split("\n")
+        .filter(|l| *l != "")
+        .map(|s| SignalItem::new(s))
+        .sorted_by(|one, other| one.cmp(other))
+        .collect_vec();
 
     println!("{}", score);
-    println!("{:?}", list.binary_search(&SignalItem::List(vec![SignalItem::List(vec![SignalItem::Number(6)])])));
-    println!("{:?}", list.binary_search(&SignalItem::List(vec![SignalItem::List(vec![SignalItem::Number(2)])])));
+    println!(
+        "{:?}",
+        list.binary_search(&SignalItem::List(vec![SignalItem::List(vec![
+            SignalItem::Number(6)
+        ])]))
+    );
+    println!(
+        "{:?}",
+        list.binary_search(&SignalItem::List(vec![SignalItem::List(vec![
+            SignalItem::Number(2)
+        ])]))
+    );
 }
 
 #[derive(Debug, PartialEq, Eq)]
 enum SignalItem {
     Number(i64),
-    List(Vec<SignalItem>)
+    List(Vec<SignalItem>),
 }
 
 impl SignalItem {
@@ -121,7 +209,7 @@ impl SignalItem {
             match char {
                 '[' => {
                     lists.push_front(vec![]);
-                },
+                }
                 ']' => {
                     if digits != "" {
                         let number = str::parse(&digits).unwrap();
@@ -135,10 +223,10 @@ impl SignalItem {
                     } else {
                         return SignalItem::List(lists.pop_front().unwrap());
                     }
-                },
+                }
                 '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                     digits.push(char);
-                },
+                }
                 ',' => {
                     if digits != "" {
                         let number = str::parse(&digits).unwrap();
@@ -157,20 +245,20 @@ impl SignalItem {
         match self {
             SignalItem::Number(n) => match other {
                 SignalItem::Number(on) => {
-                   if n == on {
-                    None
-                   } else {
-                    Some(n < on)
-                   }
-                },
+                    if n == on {
+                        None
+                    } else {
+                        Some(n < on)
+                    }
+                }
                 SignalItem::List(_) => {
                     SignalItem::List(vec![SignalItem::Number(*n)]).compare(other)
-                },
+                }
             },
             SignalItem::List(l) => match other {
                 SignalItem::Number(n) => {
                     self.compare(&SignalItem::List(vec![SignalItem::Number(*n)]))
-                },
+                }
                 SignalItem::List(ol) => {
                     for i in 0..l.len() {
                         if i >= ol.len() {
@@ -187,7 +275,7 @@ impl SignalItem {
                     }
 
                     return None;
-                },
+                }
             },
         }
     }
@@ -202,11 +290,13 @@ impl PartialOrd for SignalItem {
 impl Ord for SignalItem {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.compare(other) {
-            Some(res) => if res {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            },
+            Some(res) => {
+                if res {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            }
             None => Ordering::Equal,
         }
     }
@@ -237,8 +327,11 @@ fn day_twelve() {
 
     for start in starts {
         let mut visited = HashSet::new();
-        let mut paths = VecDeque::new();  
-        paths.push_back(GridPath{ steps: 0, position: start});
+        let mut paths = VecDeque::new();
+        paths.push_back(GridPath {
+            steps: 0,
+            position: start,
+        });
 
         while paths.len() != 0 {
             let path = paths.pop_front().unwrap();
@@ -246,13 +339,13 @@ fn day_twelve() {
                 score = score.min(path.steps + 1);
                 break;
             }
-    
+
             if visited.contains(&path.position) {
                 continue;
             }
-    
+
             visited.insert(path.position);
-    
+
             // Generate new moves
             let mut moves = vec![];
             if path.position.0 != 0 {
@@ -267,14 +360,18 @@ fn day_twelve() {
             if path.position.1 < grid.len() - 1 {
                 moves.push((path.position.0, path.position.1 + 1));
             }
-    
-            moves = moves.into_iter().filter(|m| {
-                grid[path.position.1][path.position.0] + 1 >= grid[m.1][m.0]
-            }).collect();
+
+            moves = moves
+                .into_iter()
+                .filter(|m| grid[path.position.1][path.position.0] + 1 >= grid[m.1][m.0])
+                .collect();
             for m in moves {
-                paths.push_back(GridPath { steps: path.steps + 1, position: m });
+                paths.push_back(GridPath {
+                    steps: path.steps + 1,
+                    position: m,
+                });
             }
-        }   
+        }
     }
 
     println!("{}", score);
@@ -346,118 +443,103 @@ fn day_eleven() {
     // },
     // ];
 
-    let mut monkeys = vec![Monkey {
-        items: VecDeque::from_iter(vec![91, 66]),
-        operation: |old| {
-            old * 13
+    let mut monkeys = vec![
+        Monkey {
+            items: VecDeque::from_iter(vec![91, 66]),
+            operation: |old| old * 13,
+            test: |old| {
+                if old % 19 == 0 {
+                    6
+                } else {
+                    2
+                }
+            },
+            inspected: 0,
         },
-        test: |old| {
-            if old % 19 == 0 {
-                6
-            } else {
-                2
-            }
+        Monkey {
+            items: VecDeque::from_iter(vec![78, 97, 59]),
+            operation: |old| old + 7,
+            test: |old| {
+                if old % 5 == 0 {
+                    0
+                } else {
+                    3
+                }
+            },
+            inspected: 0,
         },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![78, 97, 59]),
-        operation: |old| {
-            old + 7
+        Monkey {
+            items: VecDeque::from_iter(vec![57, 59, 97, 84, 72, 83, 56, 76]),
+            operation: |old| old + 6,
+            test: |old| {
+                if old % 11 == 0 {
+                    5
+                } else {
+                    7
+                }
+            },
+            inspected: 0,
         },
-        test: |old| {
-            if old % 5 == 0 {
-                0
-            } else {
-                3
-            }
+        Monkey {
+            items: VecDeque::from_iter(vec![81, 78, 70, 58, 84]),
+            operation: |old| old + 5,
+            test: |old| {
+                if old % 17 == 0 {
+                    6
+                } else {
+                    0
+                }
+            },
+            inspected: 0,
         },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![57, 59, 97, 84, 72, 83, 56, 76]),
-        operation: |old| {
-            old + 6
+        Monkey {
+            items: VecDeque::from_iter(vec![60]),
+            operation: |old| old + 8,
+            test: |old| {
+                if old % 7 == 0 {
+                    1
+                } else {
+                    3
+                }
+            },
+            inspected: 0,
         },
-        test: |old| {
-            if old % 11 == 0 {
-                5
-            } else {
-                7
-            }
+        Monkey {
+            items: VecDeque::from_iter(vec![57, 69, 63, 75, 62, 77, 72]),
+            operation: |old| old * 5,
+            test: |old| {
+                if old % 13 == 0 {
+                    7
+                } else {
+                    4
+                }
+            },
+            inspected: 0,
         },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![81, 78, 70, 58, 84]),
-        operation: |old| {
-            old + 5
+        Monkey {
+            items: VecDeque::from_iter(vec![73, 66, 86, 79, 98, 87]),
+            operation: |old| old * old,
+            test: |old| {
+                if old % 3 == 0 {
+                    5
+                } else {
+                    2
+                }
+            },
+            inspected: 0,
         },
-        test: |old| {
-            if old % 17 == 0 {
-                6
-            } else {
-                0
-            }
+        Monkey {
+            items: VecDeque::from_iter(vec![95, 89, 63, 67]),
+            operation: |old| old + 2,
+            test: |old| {
+                if old % 2 == 0 {
+                    1
+                } else {
+                    4
+                }
+            },
+            inspected: 0,
         },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![60]),
-        operation: |old| {
-            old + 8
-        },
-        test: |old| {
-            if old % 7 == 0 {
-                1
-            } else {
-                3
-            }
-        },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![57, 69, 63, 75, 62, 77, 72]),
-        operation: |old| {
-            old * 5
-        },
-        test: |old| {
-            if old % 13 == 0 {
-                7
-            } else {
-                4
-            }
-        },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![73, 66, 86, 79, 98, 87]),
-        operation: |old| {
-            old * old
-        },
-        test: |old| {
-            if old % 3 == 0 {
-                5
-            } else {
-                2
-            }
-        },
-        inspected: 0,
-    },
-    Monkey {
-        items: VecDeque::from_iter(vec![95, 89, 63, 67]),
-        operation: |old| {
-            old + 2
-        },
-        test: |old| {
-            if old % 2 == 0 {
-                1
-            } else {
-                4
-            }
-        },
-        inspected: 0,
-    },
     ];
 
     let product = 19 * 5 * 11 * 17 * 7 * 13 * 3 * 2;
@@ -480,7 +562,10 @@ fn day_eleven() {
 
     monkeys.sort();
     println!("{:?}", monkeys);
-    println!("{:?}", monkeys[monkeys.len() - 1].inspected * monkeys[monkeys.len() - 2].inspected);
+    println!(
+        "{:?}",
+        monkeys[monkeys.len() - 1].inspected * monkeys[monkeys.len() - 2].inspected
+    );
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -522,14 +607,13 @@ fn day_ten() {
         let op: Vec<&str> = raw_op.split(' ').collect();
         if (cycle - 20) % 40 == 0 {
             score += current * cycle;
-        }        
+        }
         if ((cycle - 1) % 40).abs_diff(current) <= 1 {
             screen[(cycle - 1) as usize] = true
         }
 
         match op[0] {
-            "noop" => {
-            },
+            "noop" => {}
             "addx" => {
                 cycle += 1;
 
@@ -540,18 +624,14 @@ fn day_ten() {
                     score += current * cycle;
                 }
                 current += str::parse::<isize>(op[1]).unwrap();
-            },
+            }
             _ => panic!(),
         };
     }
 
     println!("{}", score);
     for i in 1..screen.len() + 1 {
-        print!("{}", if screen[i - 1] {
-            "#"
-        } else {
-            "."
-        });
+        print!("{}", if screen[i - 1] { "#" } else { "." });
 
         if i % 40 == 0 {
             println!();
