@@ -15,10 +15,10 @@ fn main() {
 }
 
 fn day_fifteen() {
-    let row: i64 = 10;
+    let row: i64 = 2000000;
     let data = read_file_to_string(Path::new("data/15_smol.txt"));
 
-    let mut grid: HashMap<i64, HashSet<i64, RandomState>> = HashMap::new();
+    let mut row_count = HashSet::new();
     let sensors = data
         .lines()
         .map(|l| {
@@ -49,31 +49,20 @@ fn day_fifteen() {
         .collect_vec();
 
     for sensor in sensors {
-        let manhatten = (sensor.x - sensor.beacon_x).abs() + (sensor.y - sensor.beacon_y).abs();
-        // println!("{}", row.abs_diff(sensor.y));
-        // if row.abs_diff(sensor.y) > manhatten as u64 {
-        //     continue;
-        // }
+        let manhatten =
+            ((sensor.x - sensor.beacon_x).abs() + (sensor.y - sensor.beacon_y).abs()) as u64;
+        println!("{:?}", sensor);
+        if row.abs_diff(sensor.y) > manhatten {
+            continue;
+        }
 
-        for i in -manhatten..manhatten + 1 {
-            for j in -manhatten..manhatten + 1 {
-                if i.abs() + j.abs() > manhatten {
-                    continue;
-                }
-
-                match grid.get_mut(&(j + sensor.y)) {
-                    Some(inner) => {
-                        inner.insert(i + sensor.x);
-                    }
-                    None => {
-                        grid.insert(j + sensor.y, HashSet::from_iter(vec![i + sensor.x]));
-                    }
-                };
-            }
+        let half_row = (manhatten - row.abs_diff(sensor.y) + 1) as i64;
+        for i in (sensor.x - half_row + 1)..(sensor.x + half_row) {
+            row_count.insert(i);
         }
     }
 
-    println!("{:?}", grid.get(&row).unwrap().len() - 1);
+    println!("{}", row_count.len());
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
