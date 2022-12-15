@@ -1,7 +1,7 @@
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{hash_map::RandomState, HashMap, HashSet, VecDeque},
+    collections::{HashSet, VecDeque},
     fs::File,
     io::Read,
     path::Path,
@@ -15,10 +15,9 @@ fn main() {
 }
 
 fn day_fifteen() {
-    let row: i64 = 2000000;
-    let data = read_file_to_string(Path::new("data/15_smol.txt"));
+    let outer = 4000000;
+    let data = read_file_to_string(Path::new("data/15.txt"));
 
-    let mut row_count = HashSet::new();
     let sensors = data
         .lines()
         .map(|l| {
@@ -44,25 +43,41 @@ fn day_fifteen() {
                 y: sy,
                 beacon_x: bx,
                 beacon_y: by,
+                distance: ((sx - bx).abs() + (sy - by).abs()) as u64,
             }
         })
         .collect_vec();
 
-    for sensor in sensors {
-        let manhatten =
-            ((sensor.x - sensor.beacon_x).abs() + (sensor.y - sensor.beacon_y).abs()) as u64;
-        println!("{:?}", sensor);
-        if row.abs_diff(sensor.y) > manhatten {
-            continue;
-        }
+    check_square(&sensors, 0, outer, 0, outer);
+    // let all = sensors.iter().all(|s| s.can_contain_hidden(10, 15, 10, 12));
+    // println!("{all}");
+}
 
-        let half_row = (manhatten - row.abs_diff(sensor.y) + 1) as i64;
-        for i in (sensor.x - half_row + 1)..(sensor.x + half_row) {
-            row_count.insert(i);
+fn check_square(sensors: &Vec<Sensor>, x1: i64, x2: i64, y1: i64, y2: i64) -> (i64, i64) {
+    if x2 - x1 <= 1 {
+        if sensors.iter().all(|s| s.can_contain_hidden(x1, x1, y1, y1)) {
+            println!("ANS: {x1} {x1} {y1} {y1}");
+        }
+        if sensors.iter().all(|s| s.can_contain_hidden(x1, x1, y2, y2)) {
+            println!("ANS: {x1} {x1} {y2} {y2}");
+        }
+        return (0, 0);
+    }
+
+    let new_squares = [
+        (x1, (x2 + x1) / 2, y1, (y2 + y1) / 2),
+        ((x2 + x1) / 2, x2, y1, (y2 + y1) / 2),
+        (x1, (x2 + x1) / 2, (y2 + y1) / 2, y2),
+        ((x2 + x1) / 2, x2, (y2 + y1) / 2, y2),
+    ];
+
+    for (x1, x2, y1, y2) in new_squares {
+        if sensors.iter().all(|s| s.can_contain_hidden(x1, x2, y1, y2)) {
+            check_square(sensors, x1, x2, y1, y2);
         }
     }
 
-    println!("{}", row_count.len());
+    (0, 0)
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
@@ -71,6 +86,16 @@ struct Sensor {
     y: i64,
     beacon_x: i64,
     beacon_y: i64,
+    distance: u64,
+}
+
+impl Sensor {
+    fn can_contain_hidden(&self, x1: i64, x2: i64, y1: i64, y2: i64) -> bool {
+        (self.x - x1).abs() + (self.y - y1).abs() > self.distance as i64
+            || (self.x - x2).abs() + (self.y - y1).abs() > self.distance as i64
+            || (self.x - x1).abs() + (self.y - y2).abs() > self.distance as i64
+            || (self.x - x2).abs() + (self.y - y2).abs() > self.distance as i64
+    }
 }
 
 #[allow(dead_code)]
