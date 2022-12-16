@@ -1,7 +1,7 @@
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{HashSet, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     fs::File,
     io::Read,
     path::Path,
@@ -11,9 +11,50 @@ use std::{
 use itertools::Itertools;
 
 fn main() {
-    day_fifteen();
+    day_sixteen();
 }
 
+fn day_sixteen() {
+    let data = read_file_to_string(Path::new("data/16_smol.txt"));
+
+    let graph = Graph {
+        nodes: HashMap::from_iter(data.lines().map(|l| {
+            let mut parts = l.split("=");
+            let label = String::from_iter(parts.next().unwrap().chars().skip(6).take(2));
+            let mut parts = parts.next().unwrap().split("; ");
+            let flow = str::parse(parts.next().unwrap()).unwrap();
+            let edges = String::from_iter(parts.next().unwrap().chars().skip(23))
+                .split(", ")
+                .map(|s| s.to_string())
+                .collect_vec();
+
+            (
+                label,
+                Node {
+                    edges,
+                    base_score: flow,
+                    released: false,
+                },
+            )
+        })),
+    };
+
+    println!("{:?}", graph.nodes);
+}
+
+#[derive(Debug)]
+struct Graph {
+    nodes: HashMap<String, Node>,
+}
+
+#[derive(Debug)]
+struct Node {
+    edges: Vec<String>,
+    base_score: i64,
+    released: bool,
+}
+
+#[allow(dead_code)]
 fn day_fifteen() {
     let outer = 4000000;
     let data = read_file_to_string(Path::new("data/15.txt"));
@@ -49,8 +90,6 @@ fn day_fifteen() {
         .collect_vec();
 
     check_square(&sensors, 0, outer, 0, outer);
-    // let all = sensors.iter().all(|s| s.can_contain_hidden(10, 15, 10, 12));
-    // println!("{all}");
 }
 
 fn check_square(sensors: &Vec<Sensor>, x1: i64, x2: i64, y1: i64, y2: i64) -> (i64, i64) {
