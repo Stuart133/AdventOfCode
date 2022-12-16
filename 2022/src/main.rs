@@ -6,6 +6,7 @@ use std::{
     io::Read,
     path::Path,
     rc::Rc,
+    str::from_utf8,
 };
 
 use itertools::Itertools;
@@ -20,12 +21,14 @@ fn day_sixteen() {
     let graph = Graph {
         nodes: HashMap::from_iter(data.lines().map(|l| {
             let mut parts = l.split("=");
-            let label = String::from_iter(parts.next().unwrap().chars().skip(6).take(2));
+            let str = String::from_iter(parts.next().unwrap().chars().skip(6).take(2));
+            let bytes = str.as_bytes();
+            let label = ((bytes[0] as u32) << 8) + bytes[1] as u32;
             let mut parts = parts.next().unwrap().split("; ");
             let flow = str::parse(parts.next().unwrap()).unwrap();
             let edges = String::from_iter(parts.next().unwrap().chars().skip(23))
                 .split(", ")
-                .map(|s| s.to_string())
+                .map(|s| ((s.as_bytes()[0] as u32) << 8) + s.as_bytes()[1] as u32)
                 .collect_vec();
 
             (
@@ -40,28 +43,35 @@ fn day_sixteen() {
 
     let mut visited = HashSet::new();
     let mut paths = VecDeque::new();
+
+    let preopened = graph
+        .nodes
+        .iter()
+        .filter(|(_, n)| n.base_score == 0)
+        .map(|(l, _)| *l);
+
     paths.push_back(GraphPath {
-        position: "AA".to_string(),
-        opened: HashSet::from([
-            "AA".to_string(),
-            "FF".to_string(),
-            "GG".to_string(),
-            "II".to_string(),
-        ]),
+        position: (("AA".as_bytes()[0] as u32) << 8) + "AA".as_bytes()[1] as u32,
+        elephant_position: (("AA".as_bytes()[0] as u32) << 8) + "AA".as_bytes()[1] as u32,
+        opened: HashSet::from_iter(preopened),
         score: 0,
-        time_step: 30,
+        time_step: 26,
     });
 
     let mut best_score = 0;
     while !paths.is_empty() {
         let path = paths.pop_front().unwrap();
-        if path.time_step == 0 {
+        if path.time_step == 0 || path.opened.len() == graph.nodes.len() {
+            if path.time_step != 0 && path.score > best_score {
+                println!("{} {}", path.time_step, path.score);
+            }
             best_score = best_score.max(path.score);
             continue;
         }
 
         let visit = Visited {
-            node: path.position.clone(),
+            node: path.position,
+            elephant_node: path.elephant_position,
             time_step: path.time_step,
             opened: hashset_to_vec(&path.opened),
         };
@@ -71,31 +81,87 @@ fn day_sixteen() {
 
         visited.insert(visit);
 
-        if !path.opened.contains(&path.position) {
+        if !path.opened.contains(&path.position)
+            && !path.opened.contains(&path.elephant_position)
+            && path.elephant_position != path.position
+        {
             let mut new_opened = path.opened.clone();
-            new_opened.insert(path.position.clone());
+            new_opened.insert(path.position);
+            new_opened.insert(path.elephant_position);
+            let score = (graph.nodes.get(&path.position).unwrap().base_score
+                * (path.time_step - 1))
+                + (graph.nodes.get(&path.elephant_position).unwrap().base_score
+                    * (path.time_step - 1));
             paths.push_back(GraphPath {
-                position: path.position.clone(),
+                position: path.position,
+                elephant_position: path.elephant_position,
                 opened: new_opened,
-                score: graph.nodes.get(&path.position).unwrap().base_score * (path.time_step - 1),
+                score: path.score + score,
                 time_step: path.time_step - 1,
             });
         }
 
+        if !path.opened.contains(&path.position) {
+            for elephant_edge in graph
+                .nodes
+                .get(&path.elephant_position)
+                .unwrap()
+                .edges
+                .iter()
+            {
+                let mut new_opened = path.opened.clone();
+                new_opened.insert(path.position.clone());
+                paths.push_back(GraphPath {
+                    position: path.position,
+                    elephant_position: *elephant_edge,
+                    opened: new_opened,
+                    score: path.score
+                        + (graph.nodes.get(&path.position).unwrap().base_score
+                            * (path.time_step - 1)),
+                    time_step: path.time_step - 1,
+                });
+            }
+        }
+
+        if !path.opened.contains(&path.elephant_position) {
+            for edge in graph.nodes.get(&path.position).unwrap().edges.iter() {
+                let mut new_opened = path.opened.clone();
+                new_opened.insert(path.elephant_position);
+                paths.push_back(GraphPath {
+                    position: *edge,
+                    elephant_position: path.elephant_position,
+                    opened: new_opened,
+                    score: path.score
+                        + (graph.nodes.get(&path.elephant_position).unwrap().base_score
+                            * (path.time_step - 1)),
+                    time_step: path.time_step - 1,
+                });
+            }
+        }
+
         for edge in graph.nodes.get(&path.position).unwrap().edges.iter() {
-            paths.push_back(GraphPath {
-                position: edge.clone(),
-                opened: path.opened.clone(),
-                score: path.score,
-                time_step: path.time_step - 1,
-            })
+            for elephant_edge in graph
+                .nodes
+                .get(&path.elephant_position)
+                .unwrap()
+                .edges
+                .iter()
+            {
+                paths.push_back(GraphPath {
+                    position: *edge,
+                    elephant_position: *elephant_edge,
+                    opened: path.opened.clone(),
+                    score: path.score,
+                    time_step: path.time_step - 1,
+                })
+            }
         }
     }
 
     println!("{}", best_score);
 }
 
-fn hashset_to_vec(set: &HashSet<String>) -> Vec<String> {
+fn hashset_to_vec(set: &HashSet<u32>) -> Vec<u32> {
     let mut out = vec![];
     for item in set {
         out.push(item.clone());
@@ -107,27 +173,30 @@ fn hashset_to_vec(set: &HashSet<String>) -> Vec<String> {
 
 #[derive(Debug)]
 struct Graph {
-    nodes: HashMap<String, Node>,
+    nodes: HashMap<u32, Node>,
 }
 
 #[derive(Debug)]
 struct Node {
-    edges: Vec<String>,
+    edges: Vec<u32>,
     base_score: i64,
 }
 
+#[derive(Debug)]
 struct GraphPath {
-    position: String,
-    opened: HashSet<String>,
+    position: u32,
+    elephant_position: u32,
+    opened: HashSet<u32>,
     score: i64,
     time_step: i64,
 }
 
 #[derive(Hash, PartialEq, Eq)]
 struct Visited {
-    node: String,
+    node: u32,
+    elephant_node: u32,
     time_step: i64,
-    opened: Vec<String>,
+    opened: Vec<u32>,
 }
 
 #[allow(dead_code)]
