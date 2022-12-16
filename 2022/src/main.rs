@@ -33,13 +33,76 @@ fn day_sixteen() {
                 Node {
                     edges,
                     base_score: flow,
-                    released: false,
                 },
             )
         })),
     };
 
-    println!("{:?}", graph.nodes);
+    let mut visited = HashSet::new();
+    let mut paths = VecDeque::new();
+    paths.push_back(GraphPath {
+        position: "AA".to_string(),
+        opened: HashSet::from([
+            "AA".to_string(),
+            "FF".to_string(),
+            "GG".to_string(),
+            "II".to_string(),
+        ]),
+        score: 0,
+        time_step: 30,
+    });
+
+    let mut best_score = 0;
+    while !paths.is_empty() {
+        let path = paths.pop_front().unwrap();
+        if path.time_step == 0 {
+            best_score = best_score.max(path.score);
+            continue;
+        }
+
+        let visit = Visited {
+            node: path.position.clone(),
+            time_step: path.time_step,
+            opened: hashset_to_vec(&path.opened),
+        };
+        if visited.contains(&visit) {
+            continue;
+        }
+
+        visited.insert(visit);
+
+        if !path.opened.contains(&path.position) {
+            let mut new_opened = path.opened.clone();
+            new_opened.insert(path.position.clone());
+            paths.push_back(GraphPath {
+                position: path.position.clone(),
+                opened: new_opened,
+                score: graph.nodes.get(&path.position).unwrap().base_score * (path.time_step - 1),
+                time_step: path.time_step - 1,
+            });
+        }
+
+        for edge in graph.nodes.get(&path.position).unwrap().edges.iter() {
+            paths.push_back(GraphPath {
+                position: edge.clone(),
+                opened: path.opened.clone(),
+                score: path.score,
+                time_step: path.time_step - 1,
+            })
+        }
+    }
+
+    println!("{}", best_score);
+}
+
+fn hashset_to_vec(set: &HashSet<String>) -> Vec<String> {
+    let mut out = vec![];
+    for item in set {
+        out.push(item.clone());
+    }
+    out.sort();
+
+    out
 }
 
 #[derive(Debug)]
@@ -51,7 +114,20 @@ struct Graph {
 struct Node {
     edges: Vec<String>,
     base_score: i64,
-    released: bool,
+}
+
+struct GraphPath {
+    position: String,
+    opened: HashSet<String>,
+    score: i64,
+    time_step: i64,
+}
+
+#[derive(Hash, PartialEq, Eq)]
+struct Visited {
+    node: String,
+    time_step: i64,
+    opened: Vec<String>,
 }
 
 #[allow(dead_code)]
