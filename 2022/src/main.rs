@@ -6,7 +6,6 @@ use std::{
     io::Read,
     path::Path,
     rc::Rc,
-    str::from_utf8,
 };
 
 use itertools::Itertools;
@@ -16,7 +15,7 @@ fn main() {
 }
 
 fn day_sixteen() {
-    let data = read_file_to_string(Path::new("data/16_smol.txt"));
+    let data = read_file_to_string(Path::new("data/16.txt"));
 
     let graph = Graph {
         nodes: HashMap::from_iter(data.lines().map(|l| {
@@ -24,6 +23,7 @@ fn day_sixteen() {
             let str = String::from_iter(parts.next().unwrap().chars().skip(6).take(2));
             let bytes = str.as_bytes();
             let label = ((bytes[0] as u32) << 8) + bytes[1] as u32;
+            println!("{}", label);
             let mut parts = parts.next().unwrap().split("; ");
             let flow = str::parse(parts.next().unwrap()).unwrap();
             let edges = String::from_iter(parts.next().unwrap().chars().skip(23))
@@ -69,9 +69,10 @@ fn day_sixteen() {
             continue;
         }
 
+        let mut pos = vec![path.position, path.elephant_position];
+        pos.sort();
         let visit = Visited {
-            node: path.position,
-            elephant_node: path.elephant_position,
+            position: pos,
             time_step: path.time_step,
             opened: hashset_to_vec(&path.opened),
         };
@@ -80,6 +81,9 @@ fn day_sixteen() {
         }
 
         visited.insert(visit);
+        if visited.len() % 10000 == 0 {
+            println!("{}", visited.len());
+        }
 
         if !path.opened.contains(&path.position)
             && !path.opened.contains(&path.elephant_position)
@@ -99,6 +103,8 @@ fn day_sixteen() {
                 score: path.score + score,
                 time_step: path.time_step - 1,
             });
+
+            continue;
         }
 
         if !path.opened.contains(&path.position) {
@@ -121,6 +127,8 @@ fn day_sixteen() {
                     time_step: path.time_step - 1,
                 });
             }
+
+            continue;
         }
 
         if !path.opened.contains(&path.elephant_position) {
@@ -137,6 +145,8 @@ fn day_sixteen() {
                     time_step: path.time_step - 1,
                 });
             }
+
+            continue;
         }
 
         for edge in graph.nodes.get(&path.position).unwrap().edges.iter() {
@@ -191,10 +201,9 @@ struct GraphPath {
     time_step: i64,
 }
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 struct Visited {
-    node: u32,
-    elephant_node: u32,
+    position: Vec<u32>,
     time_step: i64,
     opened: Vec<u32>,
 }
