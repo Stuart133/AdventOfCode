@@ -11,9 +11,104 @@ use std::{
 use itertools::Itertools;
 
 fn main() {
-    day_sixteen();
+    day_seventeen();
 }
 
+fn day_seventeen() {
+    let data = read_file_to_string(Path::new("data/17_smol.txt"));
+
+    let gas = data
+        .chars()
+        .map(|c| match c {
+            '>' => Direction::Right,
+            '<' => Direction::Left,
+            _ => panic!(),
+        })
+        .collect_vec();
+
+    let mut chamber = [[false; 5000]; 7];
+
+    let shapes = vec![
+        Shape {
+            points: vec![(0, 0), (1, 0), (2, 0), (3, 0)],
+        },
+        Shape {
+            points: vec![(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)],
+        },
+        Shape {
+            points: vec![(0, 0), (1, 0), (2, 0), (2, 1), (2, 2)],
+        },
+        Shape {
+            points: vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+        },
+        Shape {
+            points: vec![(0, 0), (1, 0), (0, 1), (1, 1)],
+        },
+    ];
+
+    let mut start = (2, 3);
+    let mut gas_step = 0;
+    for i in 0..3 {
+        let shape = shapes[i % shapes.len()].clone();
+        let mut position = start.clone();
+        loop {
+            // First blow with gas
+            match gas[gas_step] {
+                Direction::Left => {
+                    if position.0 != 0
+                        && !check_intersection(&shape.points, position.0 - 1, position.1, &chamber)
+                    {
+                        position.0 -= 1;
+                    }
+                }
+                Direction::Right => {
+                    if position.0 != 7
+                        && !check_intersection(&shape.points, position.0 + 1, position.1, &chamber)
+                    {
+                        position.0 -= 1;
+                    }
+                }
+            }
+            gas_step = (gas_step + 1) % gas.len();
+
+            // Now move down
+            if position.1 != 0
+                && !check_intersection(&shape.points, position.0, position.1 - 1, &chamber)
+            {
+                position.1 -= 1;
+            } else {
+                // We're resting on something now
+                for point in shape.points.iter() {
+                    assert!(!chamber[point.0 + position.0][point.1 + position.1]);
+                    chamber[point.0 + position.0][point.1 + position.1] = true;
+
+                    start.1 = start.1.max(point.1 + position.1);
+                }
+            }
+        }
+    }
+}
+
+fn check_intersection(
+    points: &Vec<(usize, usize)>,
+    x: usize,
+    y: usize,
+    grid: &[[bool; 5000]; 7],
+) -> bool {
+    points.iter().all(|p| grid[p.0 + x][p.1 + y])
+}
+
+#[derive(Debug, Clone)]
+struct Shape {
+    points: Vec<(usize, usize)>,
+}
+
+enum Direction {
+    Left,
+    Right,
+}
+
+#[allow(dead_code)]
 fn day_sixteen() {
     let data = read_file_to_string(Path::new("data/16.txt"));
 
