@@ -15,7 +15,7 @@ fn main() {
 }
 
 fn day_seventeen() {
-    let data = read_file_to_string(Path::new("data/17_smol.txt"));
+    let data = read_file_to_string(Path::new("data/17.txt"));
 
     let gas = data
         .chars()
@@ -26,7 +26,12 @@ fn day_seventeen() {
         })
         .collect_vec();
 
-    let mut chamber = [[false; 5000]; 7];
+    let mut chamber: [VecDeque<bool>; 7] = Default::default();
+    for col in chamber.iter_mut() {
+        for _ in 0..5000 {
+            col.push_back(false);
+        }
+    }
 
     let shapes = vec![
         Shape {
@@ -47,10 +52,36 @@ fn day_seventeen() {
     ];
 
     let mut start = (2, 3);
+    let mut height_offset = 0;
     let mut gas_step = 0;
-    for i in 0..3 {
+    let mut visited = HashMap::<CavePeriod, (usize, usize)>::new();
+    let mut top_points = [0; 7];
+    let mut period: Option<Period> = None;
+    let mut i = 0;
+    let count = 1000000000000;
+    while i < count {
         let shape = shapes[i % shapes.len()].clone();
         let mut position = start.clone();
+
+        if let Some(period) = &period {
+            if i + (period.step_change * 1000) < count {
+                i += period.step_change * 1000;
+                height_offset += period.height_change * 1000;
+
+                continue;
+            } else if i + (period.step_change * 100) < count {
+                i += period.step_change * 100;
+                height_offset += period.height_change * 100;
+
+                continue;
+            } else if i + period.step_change < count {
+                i += period.step_change;
+                height_offset += period.height_change;
+
+                continue;
+            }
+        }
+
         loop {
             // First blow with gas
             match gas[gas_step] {
@@ -62,10 +93,8 @@ fn day_seventeen() {
                     }
                 }
                 Direction::Right => {
-                    if position.0 != 7
-                        && !check_intersection(&shape.points, position.0 + 1, position.1, &chamber)
-                    {
-                        position.0 -= 1;
+                    if !check_intersection(&shape.points, position.0 + 1, position.1, &chamber) {
+                        position.0 += 1;
                     }
                 }
             }
@@ -82,20 +111,85 @@ fn day_seventeen() {
                     assert!(!chamber[point.0 + position.0][point.1 + position.1]);
                     chamber[point.0 + position.0][point.1 + position.1] = true;
 
-                    start.1 = start.1.max(point.1 + position.1);
+                    top_points[point.0 + position.0] =
+                        top_points[point.0 + position.0].max(point.1 + position.1 + height_offset);
+                    start.1 = start.1.max(point.1 + position.1 + 4);
                 }
+
+                let min = top_points.iter().min().unwrap().clone();
+                for i in 0..top_points.len() {
+                    top_points[i] -= min;
+                }
+
+                // Store this position
+                let visit = CavePeriod {
+                    gas_index: gas_step,
+                    shape_index: i % shapes.len(),
+                    top_points: top_points.clone(),
+                };
+                if let Some(height) = visited.get(&visit) {
+                    println!(
+                        "Period found {:?} {} {}",
+                        height,
+                        i,
+                        (start.1 + height_offset)
+                    );
+                    period = Some(Period {
+                        step_change: i - (*height).0,
+                        height_change: (start.1 + height_offset) - (*height).1,
+                    });
+                }
+                visited.insert(visit, (i, start.1 + height_offset));
+
+                if check_line_covered(position.1, &chamber) {
+                    for col in chamber.iter_mut() {
+                        col.drain(0..position.1);
+                    }
+                    height_offset += position.1;
+                    start.1 -= position.1;
+
+                    for col in chamber.iter_mut() {
+                        for _ in 0..position.1 {
+                            col.push_back(false);
+                        }
+                    }
+                }
+                break;
             }
         }
+
+        i += 1;
     }
+
+    println!("{}", start.1 - 3 + height_offset);
+}
+
+#[derive(Debug)]
+struct Period {
+    step_change: usize,
+    height_change: usize,
+}
+
+#[derive(Hash, PartialEq, Eq)]
+struct CavePeriod {
+    gas_index: usize,
+    shape_index: usize,
+    top_points: [usize; 7],
 }
 
 fn check_intersection(
     points: &Vec<(usize, usize)>,
     x: usize,
     y: usize,
-    grid: &[[bool; 5000]; 7],
+    grid: &[VecDeque<bool>; 7],
 ) -> bool {
-    points.iter().all(|p| grid[p.0 + x][p.1 + y])
+    points
+        .iter()
+        .any(|p| p.0 + x >= 7 || grid[p.0 + x][p.1 + y])
+}
+
+fn check_line_covered(y: usize, grid: &[VecDeque<bool>; 7]) -> bool {
+    (0..7).map(|x| grid[x][y]).all(|b| b)
 }
 
 #[derive(Debug, Clone)]
