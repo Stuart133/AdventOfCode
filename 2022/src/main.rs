@@ -15,7 +15,7 @@ fn main() {
 }
 
 fn day_eighteen() {
-    let data = read_file_to_string(Path::new("data/18_smol.txt"));
+    let data = read_file_to_string(Path::new("data/18.txt"));
 
     let input = data.lines().map(|l| {
         let cube: (usize, usize, usize) = l
@@ -33,52 +33,96 @@ fn day_eighteen() {
 
     let mut cubes = HashSet::new();
     let mut surface = 0;
+    let mut bounding = (0, 0, 0);
     for cube in input {
-        let test = vec![
-            Cube {
-                x: cube.x + 1,
-                y: cube.y,
-                z: cube.z,
-            },
-            Cube {
-                x: cube.x - 1,
-                y: cube.y,
-                z: cube.z,
-            },
-            Cube {
-                x: cube.x,
-                y: cube.y + 1,
-                z: cube.z,
-            },
-            Cube {
-                x: cube.x,
-                y: cube.y - 1,
-                z: cube.z,
-            },
-            Cube {
-                x: cube.x,
-                y: cube.y,
-                z: cube.z + 1,
-            },
-            Cube {
-                x: cube.x,
-                y: cube.y,
-                z: cube.z - 1,
-            },
-        ];
-
-        let score: i32 = test
+        let score: i32 = generate_test(cube.x, cube.y, cube.z)
             .iter()
             .map(|c| if cubes.contains(c) { -1 } else { 1 })
             .sum();
         surface += score;
+        bounding.0 = bounding.0.max(cube.x + 1);
+        bounding.1 = bounding.1.max(cube.y + 1);
+        bounding.2 = bounding.2.max(cube.z + 1);
         cubes.insert(cube);
+    }
+
+    let mut visited = HashSet::new();
+    for i in 1..bounding.0 {
+        for j in 1..bounding.1 {
+            for k in 1..bounding.2 {
+                if !visited.contains(&Cube { x: i, y: j, z: k })
+                    && !cubes.contains(&Cube { x: i, y: j, z: k })
+                {
+                    surface -= check_inside(&cubes, &mut visited, i, j, k, bounding);
+                }
+            }
+        }
     }
 
     println!("{}", surface);
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+fn check_inside(
+    cubes: &HashSet<Cube>,
+    visited: &mut HashSet<Cube>,
+    x: usize,
+    y: usize,
+    z: usize,
+    bound: (usize, usize, usize),
+) -> i32 {
+    let mut queue = VecDeque::new();
+    let mut internal_visited = HashSet::new();
+    let mut surfaces = 0;
+    queue.push_back(Cube { x, y, z });
+
+    let mut enclosed = true;
+    while !queue.is_empty() {
+        let cube = queue.pop_front().unwrap();
+        if internal_visited.contains(&cube) {
+            continue;
+        }
+
+        for test in generate_test(cube.x, cube.y, cube.z) {
+            if test.x == 0
+                || test.x == bound.0
+                || test.y == 0
+                || test.y == bound.1
+                || test.z == 0
+                || test.z == bound.2
+            {
+                enclosed = false;
+                continue;
+            } else if cubes.contains(&test) {
+                surfaces += 1;
+            } else {
+                queue.push_back(test.clone())
+            }
+
+            visited.insert(cube.clone());
+            internal_visited.insert(cube.clone());
+        }
+    }
+
+    if enclosed {
+        println!("{} {} {} {}", x, y, z, surfaces);
+        surfaces
+    } else {
+        0
+    }
+}
+
+fn generate_test(x: usize, y: usize, z: usize) -> Vec<Cube> {
+    vec![
+        Cube { x: x + 1, y, z },
+        Cube { x: x - 1, y, z },
+        Cube { x, y: y + 1, z },
+        Cube { x, y: y - 1, z },
+        Cube { x, y, z: z + 1 },
+        Cube { x, y, z: z - 1 },
+    ]
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 struct Cube {
     x: usize,
     y: usize,
