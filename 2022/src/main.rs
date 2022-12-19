@@ -11,9 +11,81 @@ use std::{
 use itertools::Itertools;
 
 fn main() {
-    day_seventeen();
+    day_eighteen();
 }
 
+fn day_eighteen() {
+    let data = read_file_to_string(Path::new("data/18_smol.txt"));
+
+    let input = data.lines().map(|l| {
+        let cube: (usize, usize, usize) = l
+            .split(',')
+            .map(|coord| str::parse(coord).unwrap())
+            .collect_tuple()
+            .unwrap();
+
+        Cube {
+            x: cube.0 + 1,
+            y: cube.1 + 1,
+            z: cube.2 + 1,
+        }
+    });
+
+    let mut cubes = HashSet::new();
+    let mut surface = 0;
+    for cube in input {
+        let test = vec![
+            Cube {
+                x: cube.x + 1,
+                y: cube.y,
+                z: cube.z,
+            },
+            Cube {
+                x: cube.x - 1,
+                y: cube.y,
+                z: cube.z,
+            },
+            Cube {
+                x: cube.x,
+                y: cube.y + 1,
+                z: cube.z,
+            },
+            Cube {
+                x: cube.x,
+                y: cube.y - 1,
+                z: cube.z,
+            },
+            Cube {
+                x: cube.x,
+                y: cube.y,
+                z: cube.z + 1,
+            },
+            Cube {
+                x: cube.x,
+                y: cube.y,
+                z: cube.z - 1,
+            },
+        ];
+
+        let score: i32 = test
+            .iter()
+            .map(|c| if cubes.contains(c) { -1 } else { 1 })
+            .sum();
+        surface += score;
+        cubes.insert(cube);
+    }
+
+    println!("{}", surface);
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+struct Cube {
+    x: usize,
+    y: usize,
+    z: usize,
+}
+
+#[allow(dead_code)]
 fn day_seventeen() {
     let data = read_file_to_string(Path::new("data/17.txt"));
 
