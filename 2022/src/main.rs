@@ -6,14 +6,157 @@ use std::{
     io::Read,
     path::Path,
     rc::Rc,
+    thread,
 };
 
 use itertools::Itertools;
 
 fn main() {
-    day_eighteen();
+    day_nineteen();
 }
 
+fn day_nineteen() {
+    let data = read_file_to_string(Path::new("data/19.txt"));
+
+    let mut handles = vec![];
+    for (i, blueprint) in data
+        .lines()
+        .map(|l| {
+            let values = l.split(' ').map(|n| str::parse(n).unwrap()).collect_vec();
+            Blueprint {
+                ore_cost: values[0],
+                clay_cost: values[1],
+                obsidian_cost: (values[2], values[3]),
+                geode_cost: (values[4], values[5]),
+            }
+        })
+        .enumerate()
+    {
+        handles.push(thread::spawn(move || {
+            let mut states = HashMap::new();
+            let state = State {
+                ore_robots: 1,
+                ore: 0,
+                clay_robots: 0,
+                clay: 0,
+                obsidian_robots: 0,
+                obsidian: 0,
+                geode_robots: 0,
+                geodes: 0,
+                time_step: 32,
+            };
+            let geodes = solve_production(&blueprint, state, &mut states);
+            println!("{}", geodes);
+        }));
+    }
+
+    for handle in handles {
+        handle.join().expect("oh no");
+    }
+}
+
+fn solve_production(
+    blueprint: &Blueprint,
+    state: State,
+    memoized: &mut HashMap<State, usize>,
+) -> usize {
+    match memoized.get(&state) {
+        Some(value) => *value,
+        None => {
+            let mut best = 0;
+            if state.time_step == 0 {
+                return state.geodes;
+            }
+
+            if state.ore >= blueprint.geode_cost.0 && state.obsidian >= blueprint.geode_cost.1 {
+                let mut new_state = state.clone();
+                new_state.step_time();
+                new_state.ore -= blueprint.geode_cost.0;
+                new_state.obsidian -= blueprint.geode_cost.1;
+                new_state.geode_robots += 1;
+
+                best = best.max(solve_production(blueprint, new_state, memoized));
+            } else if state.ore >= blueprint.obsidian_cost.0
+                && state.clay >= blueprint.obsidian_cost.1
+                && state.obsidian_robots <= blueprint.geode_cost.1
+            {
+                let mut new_state = state.clone();
+                new_state.step_time();
+                new_state.ore -= blueprint.obsidian_cost.0;
+                new_state.clay -= blueprint.obsidian_cost.1;
+                new_state.obsidian_robots += 1;
+
+                best = best.max(solve_production(blueprint, new_state, memoized));
+            } else {
+                if state.ore >= blueprint.ore_cost
+                    && state.ore_robots
+                        <= (blueprint.ore_cost
+                            + blueprint.clay_cost
+                            + blueprint.obsidian_cost.0
+                            + blueprint.geode_cost.0)
+                {
+                    let mut new_state = state.clone();
+                    new_state.step_time();
+                    new_state.ore -= blueprint.ore_cost;
+                    new_state.ore_robots += 1;
+
+                    best = best.max(solve_production(blueprint, new_state, memoized));
+                }
+                if state.ore >= blueprint.clay_cost
+                    && state.clay_robots <= blueprint.obsidian_cost.1
+                {
+                    let mut new_state = state.clone();
+                    new_state.step_time();
+                    new_state.ore -= blueprint.clay_cost;
+                    new_state.clay_robots += 1;
+
+                    best = best.max(solve_production(blueprint, new_state, memoized));
+                }
+            }
+
+            let mut new_state = state.clone();
+            new_state.step_time();
+            best = best.max(solve_production(blueprint, new_state, memoized));
+
+            memoized.insert(state, best);
+
+            best
+        }
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+struct State {
+    ore_robots: usize,
+    ore: usize,
+    clay_robots: usize,
+    clay: usize,
+    obsidian_robots: usize,
+    obsidian: usize,
+    geode_robots: usize,
+    geodes: usize,
+    time_step: usize,
+}
+
+impl State {
+    fn step_time(&mut self) {
+        self.time_step -= 1;
+        self.ore += self.ore_robots;
+        self.clay += self.clay_robots;
+        self.obsidian += self.obsidian_robots;
+        self.geodes += self.geode_robots;
+    }
+}
+
+#[derive(Debug)]
+struct Blueprint {
+    ore_cost: usize,
+    clay_cost: usize,
+    obsidian_cost: (usize, usize),
+    geode_cost: (usize, usize),
+}
+
+#[allow(dead_code)]
 fn day_eighteen() {
     let data = read_file_to_string(Path::new("data/18.txt"));
 
