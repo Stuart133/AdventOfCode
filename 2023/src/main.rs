@@ -1,7 +1,192 @@
-use std::{fs::File, io::Read, path::Path};
+use std::{collections::HashMap, fs::File, io::Read, path::Path};
 
 fn main() {
-    day_one();
+    day_three();
+}
+
+#[allow(dead_code)]
+fn day_three() {
+    let data = read_file_to_string(Path::new("data/3.txt"));
+
+    let mut gears = HashMap::new();
+    let mut part_numbers = vec![];
+
+    for (i, line) in data.lines().map(|l| l.as_bytes()).enumerate() {
+        let mut position = 0;
+        let mut lookahead = 0;
+
+        while position < line.len() {
+            match line[position + lookahead] {
+                b'.' => {
+                    if lookahead == 0 {
+                        position += 1;
+                    } else {
+                        let part_number: String = line[position..position + lookahead]
+                            .iter()
+                            .map(|b| char::from(*b))
+                            .collect();
+
+                        part_numbers.push(PartNumber {
+                            number: part_number.parse().unwrap(),
+                            top_left: (i as i32 - 1, position as i32 - 1),
+                            bottom_right: (i as i32 + 1, position as i32 + lookahead as i32),
+                        });
+
+                        position += lookahead;
+                        lookahead = 0;
+                    }
+                }
+                b'0'..=b'9' => {
+                    lookahead += 1;
+                }
+                _ => {
+                    if lookahead == 0 {
+                        if line[position + lookahead] == b'*' {
+                            gears.insert((i as i32, position as i32), Gear { meshed: vec![] });
+                        }
+
+                        position += 1;
+                    } else {
+                        let part_number: String = line[position..position + lookahead]
+                            .iter()
+                            .map(|b| char::from(*b))
+                            .collect();
+
+                        part_numbers.push(PartNumber {
+                            number: part_number.parse().unwrap(),
+                            top_left: (i as i32 - 1, position as i32 - 1),
+                            bottom_right: (i as i32 + 1, position as i32 + lookahead as i32),
+                        });
+
+                        position += lookahead;
+                        lookahead = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    println!("{:?}", gears);
+    println!("{:?}", part_numbers);
+
+    for pn in part_numbers {
+        for i in pn.top_left.1..=pn.bottom_right.1 {
+            // Top
+            if let Some(gear) = gears.get_mut(&(pn.top_left.0, i)) {
+                gear.meshed.push(pn.number);
+            }
+        }
+        for i in pn.top_left.1..=pn.bottom_right.1 {
+            // Bottom
+            if let Some(gear) = gears.get_mut(&(pn.bottom_right.0, i)) {
+                gear.meshed.push(pn.number);
+            }
+        }
+        for i in pn.top_left.0 + 1..pn.bottom_right.0 {
+            // Left
+            if let Some(gear) = gears.get_mut(&(i, pn.top_left.1)) {
+                gear.meshed.push(pn.number);
+            }
+        }
+        for i in pn.top_left.0 + 1..pn.bottom_right.0 {
+            // Right
+            if let Some(gear) = gears.get_mut(&(i, pn.bottom_right.1)) {
+                gear.meshed.push(pn.number);
+            }
+        }
+    }
+
+    let count = gears
+        .iter()
+        .filter(|(_, v)| v.meshed.len() == 2)
+        .fold(0, |acc, (_, g)| acc + (g.meshed[0] * g.meshed[1]));
+
+    println!("{}", count);
+}
+
+#[derive(Debug)]
+struct PartNumber {
+    number: u32,
+    top_left: (i32, i32),
+    bottom_right: (i32, i32),
+}
+
+#[derive(Debug)]
+struct Gear {
+    meshed: Vec<u32>,
+}
+
+#[allow(dead_code)]
+fn day_two() {
+    let data = read_file_to_string(Path::new("data/2.txt"));
+
+    let count = data
+        .lines()
+        .enumerate()
+        .map(|(i, l)| Game::new(l, i + 1))
+        .map(|g| g.max_blue * g.max_green * g.max_red)
+        .fold(0, |acc, g| acc + g);
+
+    println!("{count}");
+}
+
+#[derive(Debug)]
+struct Game {
+    _id: usize,
+    max_blue: u32,
+    max_red: u32,
+    max_green: u32,
+}
+
+impl Game {
+    fn new(line: &str, i: usize) -> Self {
+        let parts: Vec<&str> = line.split(':').collect();
+        let draws = parts[1].split(';').map(|r| Draw::new(r));
+
+        let mut game = Game {
+            _id: i,
+            max_blue: 0,
+            max_red: 0,
+            max_green: 0,
+        };
+
+        for draw in draws {
+            game.max_blue = game.max_blue.max(draw.blue);
+            game.max_green = game.max_green.max(draw.green);
+            game.max_red = game.max_red.max(draw.red);
+        }
+
+        game
+    }
+}
+
+struct Draw {
+    blue: u32,
+    red: u32,
+    green: u32,
+}
+
+impl Draw {
+    fn new(raw: &str) -> Self {
+        let mut output = Draw {
+            blue: 0,
+            red: 0,
+            green: 0,
+        };
+
+        for draw in raw.split(',').map(|s| s.trim()) {
+            let parts: Vec<&str> = draw.split(' ').collect();
+            if parts[1].contains("red") {
+                output.red = parts[0].parse().unwrap();
+            } else if parts[1].contains("blue") {
+                output.blue = parts[0].parse().unwrap();
+            } else if parts[1].contains("green") {
+                output.green = parts[0].parse().unwrap();
+            }
+        }
+
+        output
+    }
 }
 
 #[allow(dead_code)]
