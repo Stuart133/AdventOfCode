@@ -1,7 +1,25 @@
 use std::{fs::File, io::Read, path::Path};
 
 fn main() {
-    println!("Hello, world!");
+    day_one();
+}
+
+#[allow(dead_code)]
+fn day_one() {
+    let data = read_file_to_string(Path::new("data/1.txt"));
+
+    let count: u32 = data
+        .lines()
+        .map(|l| {
+            let nums: Vec<char> = l.chars().filter(|c| c.is_numeric()).collect();
+
+            format!("{}{}", nums[0], nums[nums.len() - 1])
+                .parse::<u32>()
+                .unwrap()
+        })
+        .sum();
+
+    println!("{count}");
 }
 
 fn read_file_to_string(path: &Path) -> String {
