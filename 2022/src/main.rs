@@ -12,14 +12,218 @@ use std::{
 use itertools::Itertools;
 
 fn main() {
-    day_nineteen();
+    day_twentyone();
 }
 
+fn day_twentyone() {
+    let data = read_file_to_string(Path::new("data/21.txt"));
+
+    let monkies = HashMap::from_iter(data.lines().map(|l| {
+        let parts = l.split(": ").collect_vec();
+
+        (parts[0].to_string(), MonkeyRiddle::parse(parts[1]))
+    }));
+    let mut parents = HashMap::new();
+    for (k, v) in monkies.iter() {
+        match v {
+            MonkeyRiddle::Operation(l, r, _) => {
+                parents.insert(l.clone(), k.clone());
+                parents.insert(r.clone(), k.clone());
+            }
+            MonkeyRiddle::Number(_) => {}
+        }
+    }
+
+    let root = monkies.get(&"root".to_string()).unwrap().evaluate(&monkies);
+    println!("{root}");
+
+    let mut path = generate_path(&parents, &monkies);
+    path.reverse();
+
+    if let MonkeyRiddle::Operation(l, r, _) = monkies.get(&"root".to_string()).unwrap() {
+        let left = monkies.get(l).unwrap().evaluate_human(&monkies);
+        let right = monkies.get(r).unwrap().evaluate_human(&monkies);
+
+        let h = if let Some(target) = left {
+            solve_human(r, path, target, &monkies)
+        } else if let Some(target) = right {
+            solve_human(l, path, target, &monkies)
+        } else {
+            panic!();
+        };
+
+        println!("{h}");
+    }
+}
+
+fn solve_human(
+    root: &String,
+    path: Vec<Dir>,
+    mut target: i64,
+    operations: &HashMap<String, MonkeyRiddle>,
+) -> i64 {
+    let mut current = operations.get(root).unwrap();
+
+    for dir in path {
+        match current {
+            MonkeyRiddle::Operation(l, r, op) => {
+                target = match dir {
+                    Dir::Left => {
+                        current = operations.get(l).unwrap();
+                        let value = operations.get(r).unwrap().evaluate(operations);
+
+                        match op {
+                            Operation::Add => target - value,
+                            Operation::Subtract => target + value,
+                            Operation::Product => target / value,
+                            Operation::Divide => target * value,
+                        }
+                    }
+                    Dir::Right => {
+                        current = operations.get(r).unwrap();
+                        let value = operations.get(l).unwrap().evaluate(operations);
+
+                        match op {
+                            Operation::Add => target - value,
+                            Operation::Subtract => value - target,
+                            Operation::Product => target / value,
+                            Operation::Divide => value / target,
+                        }
+                    }
+                };
+            }
+            MonkeyRiddle::Number(_) => {}
+        }
+    }
+
+    target
+}
+
+fn generate_path(
+    parents: &HashMap<String, String>,
+    operations: &HashMap<String, MonkeyRiddle>,
+) -> Vec<Dir> {
+    let mut out = vec![];
+    let mut prev = &"humn".to_string();
+    let mut current = parents.get("humn").unwrap();
+
+    while *current != "root".to_string() {
+        match operations.get(current).unwrap() {
+            MonkeyRiddle::Operation(l, _, _) => {
+                if *l == *prev {
+                    out.push(Dir::Left)
+                } else {
+                    out.push(Dir::Right)
+                }
+            }
+            MonkeyRiddle::Number(_) => panic!(),
+        }
+
+        prev = current;
+        current = parents.get(current).unwrap();
+    }
+
+    out
+}
+
+#[derive(Clone)]
+enum MonkeyRiddle {
+    Operation(String, String, Operation),
+    Number(i64),
+}
+
+#[derive(Debug)]
+enum Dir {
+    Left,
+    Right,
+}
+
+impl MonkeyRiddle {
+    fn parse(input: &str) -> Self {
+        let parts = input.split(" ").collect_vec();
+        match parts.len() {
+            1 => Self::Number(str::parse(parts[0]).unwrap()),
+            3 => Self::Operation(
+                parts[0].to_string(),
+                parts[2].to_string(),
+                Operation::parse(parts[1]),
+            ),
+            _ => panic!("unexpected operation input"),
+        }
+    }
+
+    fn evaluate(&self, operations: &HashMap<String, MonkeyRiddle>) -> i64 {
+        match self {
+            MonkeyRiddle::Operation(left, right, op) => {
+                let left = operations.get(left).unwrap().evaluate(operations);
+                let right = operations.get(right).unwrap().evaluate(operations);
+
+                match op {
+                    Operation::Add => left + right,
+                    Operation::Subtract => left - right,
+                    Operation::Product => left * right,
+                    Operation::Divide => left / right,
+                }
+            }
+            MonkeyRiddle::Number(n) => *n,
+        }
+    }
+
+    fn evaluate_human(&self, operations: &HashMap<String, MonkeyRiddle>) -> Option<i64> {
+        match self {
+            MonkeyRiddle::Operation(left, right, op) => {
+                if *left == "humn".to_string() || *right == "humn".to_string() {
+                    return None;
+                } else {
+                    let left = operations.get(left).unwrap().evaluate_human(operations);
+                    let right = operations.get(right).unwrap().evaluate_human(operations);
+
+                    if left == None || right == None {
+                        return None;
+                    }
+
+                    let l = left.unwrap();
+                    let r = right.unwrap();
+
+                    match op {
+                        Operation::Add => Some(l + r),
+                        Operation::Subtract => Some(l - r),
+                        Operation::Product => Some(l * r),
+                        Operation::Divide => Some(l / r),
+                    }
+                }
+            }
+            MonkeyRiddle::Number(n) => Some(*n),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+enum Operation {
+    Add,
+    Subtract,
+    Product,
+    Divide,
+}
+
+impl Operation {
+    fn parse(input: &str) -> Self {
+        match input {
+            "+" => Self::Add,
+            "-" => Self::Subtract,
+            "*" => Self::Product,
+            "/" => Self::Divide,
+            _ => panic!("unexpected op"),
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn day_nineteen() {
     let data = read_file_to_string(Path::new("data/19.txt"));
 
     let mut handles = vec![];
-    for (i, blueprint) in data
+    for (_, blueprint) in data
         .lines()
         .map(|l| {
             let values = l.split(' ').map(|n| str::parse(n).unwrap()).collect_vec();
