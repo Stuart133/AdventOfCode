@@ -1,7 +1,69 @@
-use std::{collections::HashMap, fs::File, io::Read, path::Path};
+use std::{collections::HashMap, collections::HashSet, fs::File, io::Read, path::Path};
 
 fn main() {
-    day_three();
+    day_four();
+}
+
+#[allow(dead_code)]
+fn day_four() {
+    let data = read_file_to_string(Path::new("data/4.txt"));
+
+    let initial_cards: Vec<CardGame> = data
+        .lines()
+        .enumerate()
+        .map(|(i, l)| {
+            let t = l.split(':').collect::<Vec<&str>>()[1];
+            let numbers: Vec<HashSet<u32>> = t
+                .split('|')
+                .map(|ns| {
+                    let numbers: HashSet<u32> = ns
+                        .trim()
+                        .split(' ')
+                        .map(|n| n.trim())
+                        .filter(|n| !n.is_empty())
+                        .map(|n| n.parse().unwrap())
+                        .collect();
+
+                    numbers
+                })
+                .collect();
+
+            CardGame {
+                winning_numbers: numbers[0].clone(),
+                numbers: numbers[1].clone(),
+                index: i,
+            }
+        })
+        .collect();
+
+    let mut running_total = vec![1u32; initial_cards.len()];
+
+    for (i, game) in initial_cards.iter().enumerate() {
+        let card_count = running_total[i];
+
+        running_total[game.index + 1..(game.index + 1 + game.winning())]
+            .iter_mut()
+            .for_each(|x| {
+                *x += card_count;
+            });
+    }
+
+    let total = running_total.iter().fold(0, |acc, x| acc + x);
+
+    println!("{}", total);
+}
+
+#[derive(Clone)]
+struct CardGame {
+    winning_numbers: HashSet<u32>,
+    numbers: HashSet<u32>,
+    index: usize,
+}
+
+impl CardGame {
+    fn winning(&self) -> usize {
+        self.numbers.intersection(&self.winning_numbers).count()
+    }
 }
 
 #[allow(dead_code)]
