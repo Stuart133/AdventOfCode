@@ -1,7 +1,81 @@
 use std::{collections::HashMap, collections::HashSet, fs::File, io::Read, path::Path};
 
 fn main() {
-    day_four();
+    day_five();
+}
+
+#[allow(dead_code)]
+fn day_five() {
+    let data = read_file_to_string(Path::new("data/5_smol.txt"));
+
+    let mut seeds: Vec<i64> = "79 14 55 13"
+        .split(' ')
+        .map(|n| n.parse().unwrap())
+        .collect();
+
+    data.split("\n\n")
+        .map(|m| AlmanacMap {
+            entries: m
+                .lines()
+                .map(|l| {
+                    l.split(' ')
+                        .map(|n| n.parse().unwrap())
+                        .collect::<Vec<i64>>()
+                })
+                .map(|ns| Interval {
+                    start: ns[1],
+                    width: ns[2],
+                    offset: ns[0] - ns[1],
+                })
+                .collect(),
+        })
+        .for_each(|m| {
+            for seed in seeds.iter_mut() {
+                let tmp = *seed;
+                *seed = m.transform(*seed);
+
+                if *seed == tmp {
+                    println!("{tmp}");
+                }
+            }
+        });
+
+    println!("{:?}", seeds.iter().min());
+}
+
+#[derive(Debug)]
+struct AlmanacMap {
+    entries: Vec<Interval>,
+}
+
+impl AlmanacMap {
+    fn transform(&self, n: i64) -> i64 {
+        for entry in self.entries.iter() {
+            match entry.within(n) {
+                Some(new) => return new,
+                None => {}
+            }
+        }
+
+        n
+    }
+}
+
+#[derive(Debug)]
+struct Interval {
+    start: i64,
+    width: i64,
+    offset: i64,
+}
+
+impl Interval {
+    fn within(&self, n: i64) -> Option<i64> {
+        if n >= self.start && n <= self.start + self.width {
+            Some(n + self.offset)
+        } else {
+            None
+        }
+    }
 }
 
 #[allow(dead_code)]
