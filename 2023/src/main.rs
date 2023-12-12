@@ -1,14 +1,92 @@
 use std::{collections::HashMap, collections::HashSet, fs::File, io::Read, path::Path};
 
 fn main() {
-    day_six_2();
+    day_seven();
 }
 
 #[allow(dead_code)]
-fn day_seven() {}
+fn day_seven() {
+    let data = read_file_to_string(Path::new("data/7.txt"));
 
-enum Hand {}
+    let mut games: Vec<CamelGame> = data
+        .lines()
+        .map(|l| {
+            let parts: Vec<&str> = l.split(' ').collect();
+            let hand = Hand::construct(&parts[0].chars().map(|c| Card::parse(c)).collect());
 
+            CamelGame {
+                hand,
+                bid: parts[1].parse().unwrap(),
+            }
+        })
+        .collect();
+
+    games.sort_by(|a, b| b.hand.cmp(&a.hand));
+    let score = games
+        .iter()
+        .inspect(|g| println!("{:?}", g))
+        .enumerate()
+        .fold(0, |acc, (i, g)| acc + ((i + 1) * g.bid as usize));
+    println!("{:?}", score)
+}
+
+#[derive(Debug)]
+struct CamelGame {
+    hand: Hand,
+    bid: u64,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Hand {
+    FiveOfAKind(Card),
+    FourOfAKind(Card, Card),
+    FullHouse(Card, Card),
+    ThreeOfAKind(Card, Card, Card),
+    TwoPair(Card, Card, Card),
+    OnePair(Card, Card, Card, Card),
+    HighCard(Card, Card, Card, Card, Card),
+}
+
+impl Hand {
+    fn construct(cards: &Vec<Card>) -> Self {
+        let mut equal = HashMap::new();
+        for card in cards {
+            if equal.contains_key(card) {
+                *equal.get_mut(card).unwrap() += 1;
+            } else {
+                equal.insert(card.clone(), 1);
+            }
+        }
+
+        let mut t = vec![vec![]; 5];
+
+        for (k, v) in equal {
+            t[v - 1].push(k);
+        }
+
+        for v in t.iter_mut() {
+            v.sort();
+        }
+
+        if t[4].len() == 1 {
+            Self::FiveOfAKind(t[4][0])
+        } else if t[3].len() == 1 {
+            Self::FourOfAKind(t[3][0], t[0][0])
+        } else if t[2].len() == 1 && t[1].len() == 1 {
+            Self::FullHouse(t[2][0], t[1][0])
+        } else if t[2].len() == 1 {
+            Self::ThreeOfAKind(t[2][0], t[0][0], t[0][1])
+        } else if t[1].len() == 2 {
+            Self::TwoPair(t[1][0], t[1][1], t[0][0])
+        } else if t[1].len() == 1 {
+            Self::OnePair(t[1][0], t[0][0], t[0][1], t[0][2])
+        } else {
+            Self::HighCard(t[0][0], t[0][1], t[0][2], t[0][3], t[0][4])
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 enum Card {
     Ace,
     King,
@@ -24,6 +102,28 @@ enum Card {
     Three,
     Two,
     One,
+}
+
+impl Card {
+    fn parse(c: char) -> Self {
+        match c {
+            'A' => Self::Ace,
+            'K' => Self::King,
+            'Q' => Self::Queen,
+            'J' => Self::Jack,
+            'T' => Self::Ten,
+            '9' => Self::Nine,
+            '8' => Self::Eight,
+            '7' => Self::Seven,
+            '6' => Self::Six,
+            '5' => Self::Five,
+            '4' => Self::Four,
+            '3' => Self::Three,
+            '2' => Self::Two,
+            '1' => Self::One,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -194,10 +294,6 @@ impl AlmanacMap {
         }
 
         n
-    }
-
-    fn order_and_fill(&mut self) {
-        self.entries.sort_by(|a, b| a.start.cmp(&b.start))
     }
 }
 
