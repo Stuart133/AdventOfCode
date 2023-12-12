@@ -1,17 +1,113 @@
 use std::{collections::HashMap, collections::HashSet, fs::File, io::Read, path::Path};
 
 fn main() {
-    day_five();
+    day_six_2();
+}
+
+#[allow(dead_code)]
+fn day_seven() {}
+
+enum Hand {}
+
+enum Card {
+    Ace,
+    King,
+    Queen,
+    Jack,
+    Ten,
+    Nine,
+    Eight,
+    Seven,
+    Six,
+    Five,
+    Four,
+    Three,
+    Two,
+    One,
+}
+
+#[allow(dead_code)]
+fn day_six_2() {
+    let data = read_file_to_string(Path::new("data/6.txt"));
+
+    let data: Vec<u64> = data
+        .lines()
+        .map(|l| {
+            let t = l
+                .split(' ')
+                .filter(|n| !n.is_empty())
+                .fold(String::new(), |acc, s| acc + s);
+
+            t.parse().unwrap()
+        })
+        .collect();
+
+    let race = Race {
+        time: data[0],
+        distance: data[1],
+    };
+
+    println!("{:?}", race.ways_to_win());
+}
+
+#[allow(dead_code)]
+fn day_six() {
+    let data = read_file_to_string(Path::new("data/6.txt"));
+
+    let data: Vec<Vec<u64>> = data
+        .lines()
+        .map(|l| {
+            l.split(' ')
+                .filter(|n| !n.is_empty())
+                .map(|n| n.parse().unwrap())
+                .collect()
+        })
+        .collect();
+
+    let races = data[0]
+        .iter()
+        .zip(&data[1])
+        .map(|(a, b)| Race {
+            time: *a,
+            distance: *b,
+        })
+        .map(|r| r.ways_to_win())
+        .fold(1, |acc, ways| acc * ways);
+
+    println!("{:?}", races);
+}
+
+#[derive(Debug)]
+struct Race {
+    time: u64,
+    distance: u64,
+}
+
+impl Race {
+    fn ways_to_win(&self) -> usize {
+        (0..self.time)
+            .map(|t| t * (self.time - t))
+            .map(|d| d > self.distance)
+            .filter(|p| *p)
+            .count()
+    }
 }
 
 #[allow(dead_code)]
 fn day_five() {
     let data = read_file_to_string(Path::new("data/5_smol.txt"));
+    let raw_seeds = "79 14 55 13";
 
-    let mut seeds: Vec<i64> = "79 14 55 13"
+    let mut seeds: Vec<SeedInterval> = raw_seeds
         .split(' ')
-        .map(|n| n.parse().unwrap())
+        .zip(raw_seeds.split(' ').skip(1))
+        .step_by(2)
+        .map(|(ns, count)| SeedInterval {
+            start: ns.parse().unwrap(),
+            width: count.parse().unwrap(),
+        })
         .collect();
+    let mut seeds_tmp = vec![];
 
     data.split("\n\n")
         .map(|m| AlmanacMap {
@@ -31,16 +127,23 @@ fn day_five() {
         })
         .for_each(|m| {
             for seed in seeds.iter_mut() {
-                let tmp = *seed;
-                *seed = m.transform(*seed);
-
-                if *seed == tmp {
-                    println!("{tmp}");
-                }
+                let mut t = m.transform_interval(seed);
+                seeds_tmp.append(&mut t);
             }
+
+            seeds = seeds_tmp.clone();
+            seeds_tmp.clear();
+
+            println!("one map done");
         });
 
-    println!("{:?}", seeds.iter().min());
+    println!("{:?}", seeds.iter().map(|interval| interval.start).min());
+}
+
+#[derive(Debug, Clone)]
+struct SeedInterval {
+    start: i64,
+    width: i64,
 }
 
 #[derive(Debug)]
@@ -49,6 +152,39 @@ struct AlmanacMap {
 }
 
 impl AlmanacMap {
+    fn transform_interval(&self, seeds: &SeedInterval) -> Vec<SeedInterval> {
+        let mut new_intervals = vec![];
+        let mut start = self.transform(seeds.start);
+        let mut offset = 0;
+        let mut previous = self.transform(seeds.start) - 1;
+
+        for seed in seeds.start..=seeds.start + seeds.width {
+            let new_seed = self.transform(seed);
+
+            // We need to start a new interval
+            if new_seed - 1 != previous {
+                new_intervals.push(SeedInterval {
+                    start,
+                    width: offset - 1,
+                });
+
+                start = new_seed;
+                offset = 1;
+            } else {
+                offset += 1;
+            }
+
+            previous = new_seed;
+        }
+
+        new_intervals.push(SeedInterval {
+            start,
+            width: offset - 1,
+        });
+
+        new_intervals
+    }
+
     fn transform(&self, n: i64) -> i64 {
         for entry in self.entries.iter() {
             match entry.within(n) {
@@ -58,6 +194,10 @@ impl AlmanacMap {
         }
 
         n
+    }
+
+    fn order_and_fill(&mut self) {
+        self.entries.sort_by(|a, b| a.start.cmp(&b.start))
     }
 }
 
