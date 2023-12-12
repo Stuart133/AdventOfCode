@@ -38,12 +38,12 @@ struct CamelGame {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Hand {
-    FiveOfAKind(Card),
-    FourOfAKind(Card, Card),
-    FullHouse(Card, Card),
-    ThreeOfAKind(Card, Card, Card),
-    TwoPair(Card, Card, Card),
-    OnePair(Card, Card, Card, Card),
+    FiveOfAKind(Card, Card, Card, Card, Card),
+    FourOfAKind(Card, Card, Card, Card, Card),
+    FullHouse(Card, Card, Card, Card, Card),
+    ThreeOfAKind(Card, Card, Card, Card, Card),
+    TwoPair(Card, Card, Card, Card, Card),
+    OnePair(Card, Card, Card, Card, Card),
     HighCard(Card, Card, Card, Card, Card),
 }
 
@@ -58,30 +58,42 @@ impl Hand {
             }
         }
 
-        let mut t = vec![vec![]; 5];
+        let jokers = match equal.get(&Card::Joker) {
+            Some(v) => *v,
+            None => 0,
+        };
+        let mut t = vec![vec![]; 10];
 
         for (k, v) in equal {
-            t[v - 1].push(k);
+            if k != Card::Joker {
+                t[v - 1].push(k.clone());
+            }
         }
 
-        for v in t.iter_mut() {
-            v.sort();
-        }
+        println!("{:?}", t);
 
-        if t[4].len() == 1 {
-            Self::FiveOfAKind(t[4][0])
-        } else if t[3].len() == 1 {
-            Self::FourOfAKind(t[3][0], t[0][0])
-        } else if t[2].len() == 1 && t[1].len() == 1 {
-            Self::FullHouse(t[2][0], t[1][0])
-        } else if t[2].len() == 1 {
-            Self::ThreeOfAKind(t[2][0], t[0][0], t[0][1])
-        } else if t[1].len() == 2 {
-            Self::TwoPair(t[1][0], t[1][1], t[0][0])
-        } else if t[1].len() == 1 {
-            Self::OnePair(t[1][0], t[0][0], t[0][1], t[0][2])
+        if jokers == 5 || t[4 - jokers].len() >= 1 {
+            Self::FiveOfAKind(cards[0], cards[1], cards[2], cards[3], cards[4])
+        } else if jokers == 4 || t[3 - jokers].len() >= 1 {
+            Self::FourOfAKind(cards[0], cards[1], cards[2], cards[3], cards[4])
+        } else if (jokers == 3 && t[1].len() >= 1)
+            || (jokers == 2 && t[2].len() >= 1)
+            || (jokers == 1 && t[1].len() == 2)
+            || (t[2].len() == 1 && t[1].len() == 1)
+        {
+            Self::FullHouse(cards[0], cards[1], cards[2], cards[3], cards[4])
+        } else if jokers == 3 || t[2 - jokers].len() >= 1 {
+            Self::ThreeOfAKind(cards[0], cards[1], cards[2], cards[3], cards[4])
+        } else if jokers == 2 && t[1].len() >= 1
+            || jokers == 2 && t[0].len() >= 2
+            || jokers == 1 && t[1].len() >= 1 && t[0].len() >= 1
+            || t[1].len() == 2
+        {
+            Self::TwoPair(cards[0], cards[1], cards[2], cards[3], cards[4])
+        } else if jokers == 2 || t[1 - jokers].len() >= 1 {
+            Self::OnePair(cards[0], cards[1], cards[2], cards[3], cards[4])
         } else {
-            Self::HighCard(t[0][0], t[0][1], t[0][2], t[0][3], t[0][4])
+            Self::HighCard(cards[0], cards[1], cards[2], cards[3], cards[4])
         }
     }
 }
@@ -91,7 +103,6 @@ enum Card {
     Ace,
     King,
     Queen,
-    Jack,
     Ten,
     Nine,
     Eight,
@@ -102,6 +113,7 @@ enum Card {
     Three,
     Two,
     One,
+    Joker,
 }
 
 impl Card {
@@ -110,7 +122,6 @@ impl Card {
             'A' => Self::Ace,
             'K' => Self::King,
             'Q' => Self::Queen,
-            'J' => Self::Jack,
             'T' => Self::Ten,
             '9' => Self::Nine,
             '8' => Self::Eight,
@@ -121,6 +132,7 @@ impl Card {
             '3' => Self::Three,
             '2' => Self::Two,
             '1' => Self::One,
+            'J' => Self::Joker,
             _ => unreachable!(),
         }
     }
